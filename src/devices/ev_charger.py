@@ -8,7 +8,6 @@ import numpy as np
 
 
 class EVChargerDevice(Device):
-
     def __init__(self,
                  name: str,
                  t0_hr: float,
@@ -29,16 +28,20 @@ class EVChargerDevice(Device):
         self.ev_dt_min = ev_dt_min
         self.arrival_rate = arrival_rate
 
-    def reset(self,  seed=None):
+    def reset(self, seed=None):
         ev_sessions = self.sampler.sample_day_evs(self.arrival_rate, seed)
         day_data = [None for _ in range(len(self.timesteps_hr))]
         evs_dict = {}
+
         for ev_ind, (t_arr_hr, t_dep_hr, p_demand, utility_coef) in enumerate(ev_sessions):
             ev = EV('EV_at_%s' % self, 0, p_demand, p_demand, t_arr_hr, t_dep_hr, utility_coef)
             ev.reset()
+
             evs_dict[ev_ind] = ev
+
             t_arr_ind = self.timesteps_hr.index(t_arr_hr)
             t_dep_ind = self.timesteps_hr.index(t_dep_hr)
+
             for ti in range(t_arr_ind, t_dep_ind):
                 day_data[ti] = int(ev_ind)
 
@@ -48,6 +51,7 @@ class EVChargerDevice(Device):
                                                       index=[t_hr_to_t_str(t_hr) for t_hr in self.timesteps_hr])
         self.info['current_episode_power'] = []
         self.info['current_episode_voltage'] = []
+        
         self.update_timestep(self.t0_str)
 
     def update_timestep(self, t_str):

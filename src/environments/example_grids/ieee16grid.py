@@ -1,4 +1,5 @@
 from src.environments.power_voltage_env import PowerVoltageEnv
+from src.environments.gym_power_voltage_env import GymPowerVoltageEnv
 from src.devices.ev_charger import EVChargerDevice
 from src.devices.feeder import FeederDevice
 from src.devices.load import LoadDevice
@@ -57,5 +58,5 @@ def create_iee16_grid(config, ps_samplers_dict, ps_metadata, canopy_sampler, can
         i_max_matrix[i_from, i_to] = config['i_max']
         i_max_matrix[i_to, i_from] = config['i_max']
     # Create env
-    env = PowerVoltageEnv(devices, conductance_matrix, i_max_matrix, config)
+    env = GymPowerVoltageEnv(devices, conductance_matrix, i_max_matrix, config)
     return env
