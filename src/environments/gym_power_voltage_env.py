@@ -1,13 +1,13 @@
 from typing import List
 
 import numpy as np
-# import igraph
+import igraph
 
 import gym
 from gym import spaces
 
 from src.utils.timedata import t_hr_to_t_str, create_timesteps_hr, round_t_hr, split_dates_train_and_test_monthly
-# from src.environments.visualization import _make_graph
+from src.environments.visualization import _make_graph
 from src.devices.device import Device
 from collections import defaultdict
 
@@ -24,10 +24,12 @@ class GymPowerVoltageEnv(gym.Env):
         self.episode_index = -1
         self.conductance_matrix = conductance_matrix
         self.i_max_matrix = i_max_matrix
+
         assert np.shape(conductance_matrix) == (self.n_devices, self.n_devices),\
             'Wrong shape of conductance_matrix %s' % (np.shape(conductance_matrix))
         assert np.shape(i_max_matrix) == (self.n_devices, self.n_devices), \
             'Wrong shape of i_max_matrix %s' % (np.shape(i_max_matrix))
+
         self.current_episode_statistics = {}
         self.allowed_uncertainties = ['deterministic', 'monthly scenarios', 'monthly average']
 
@@ -47,6 +49,7 @@ class GymPowerVoltageEnv(gym.Env):
                 np.full(self.n_devices, 1.5), # u
             )),
         )
+
         self.action_space = spaces.Box(
             low = np.concatenate((
                 np.full(self.n_devices, -5),
@@ -135,21 +138,26 @@ class GymPowerVoltageEnv(gym.Env):
                 list_of_dates = self.device_to_dates[device][train_or_test]
                 date = list_of_dates[self.episode_index % len(list_of_dates)]
                 device.reset(date)
+
         self.current_episode_statistics = defaultdict(list)
+
         return self.compute_current_state()
 
     def compute_current_state(self):
         """ Computes nodal power and voltage lower and upper bounds and nodal utility coefficients
             for the current timestep. """
+
         p_min_observations = []
         p_max_observations = []
         v_min_observations = []
         v_max_observations = []
         u_observations = []
+
         for device in self.devices:
             p_min_d, p_max_d = device.p_min, device.p_max
             v_min_d, v_max_d = device.v_min, device.v_max
             u_d = device.utility_coef
+
             p_min_observations.append(p_min_d)
             p_max_observations.append(p_max_d)
             v_min_observations.append(v_min_d)
@@ -162,6 +170,7 @@ class GymPowerVoltageEnv(gym.Env):
         """ Computes nodal power and voltage lower and upper bounds and nodal utility coefficients
             for ALL timesteps in the episode. Uses different methods of estimating future ('uncertainty' parameter).
             This method IS NOT NEEDED for RL. """
+
         p_lbs, p_ubs, v_lbs, v_ubs, u = [], [], [], [], []
         target_dt_min = target_dt_min if target_dt_min is not None else self.dt_min
         target_timesteps_hr = create_timesteps_hr(self.t0_hr, target_dt_min)
@@ -212,11 +221,13 @@ class GymPowerVoltageEnv(gym.Env):
                 v_lbs_t.append(v_min_d)
                 v_ubs_t.append(v_max_d)
                 u_t.append(u_d)
+
             p_lbs.append(p_lbs_t)
             p_ubs.append(p_ubs_t)
             v_lbs.append(v_lbs_t)
             v_ubs.append(v_ubs_t)
             u.append(u_t)
+
         p_lbs = np.transpose(p_lbs, (2, 0, 1))
         p_ubs = np.transpose(p_ubs, (2, 0, 1))
         v_lbs = np.transpose(v_lbs, (2, 0, 1))
@@ -225,17 +236,21 @@ class GymPowerVoltageEnv(gym.Env):
 
         evs_dict = {}
         abs_ev_ind = 0
+
         for d_ind in self.ev_charger_inds:
             evc = self.devices[d_ind]
+
             for ev_ind, ev in evc.info['current_episode_evs_dict'].items():
                 t_arr_target_ind = target_timesteps_hr.index(ev.t_arr_hr)
                 t_dep_target_ind = target_timesteps_hr.index(ev.t_dep_hr)
                 evs_dict[abs_ev_ind] = (d_ind, t_arr_target_ind, t_dep_target_ind, ev.soc_goal, ev.utility_coef)
                 abs_ev_ind += 1
+
         return p_lbs, p_ubs, v_lbs, v_ubs, u, evs_dict
 
     def compute_constraint_violation(self, p, v):
         i_constraints_violation = 0
+
         for d_from_ind in range(self.n_devices):
             for d_to_ind in range(d_from_ind, self.n_devices):
                 g = self.conductance_matrix[d_from_ind, d_to_ind]
@@ -244,13 +259,13 @@ class GymPowerVoltageEnv(gym.Env):
                 i_constraints_violation += max(0, abs(i) - abs(i_max))
 
         power_flow_constraints_violation = 0
+
         for i in range(self.n_devices):
             p_i_target = -v[i] * sum([self.conductance_matrix[i, j] * (v[i] - v[j])
                                       for j in range(self.n_devices) if i != j]) / 1000
             power_flow_constraints_violation += max(0, abs(p_i_target - p[i]))
 
         return i_constraints_violation, power_flow_constraints_violation
-
     
     def step(self, action):
         p = action[:self.n_devices]
@@ -301,9 +316,11 @@ class GymPowerVoltageEnv(gym.Env):
 
     def compute_result(self, do_print=False):
         assert self.done, 'Compute result should only be called when env is done!'
+
         evs_soc_achieved = []
         evs_soc_maximum = []
         evs_utility_coefs = []
+
         for evc in self.node.ev_chargers:
             for ev_ind, ev in evc.info['current_episode_evs_dict'].items():
                 evs_soc_achieved.append(ev.current_soc)
@@ -319,6 +336,7 @@ class GymPowerVoltageEnv(gym.Env):
         pvs_power = 0
         feeders_price = sum(self.current_episode_statistics['feeders_price'])
         pvs_price = sum(self.current_episode_statistics['pvs_price'])
+
         for feeder in self.node.feeders:
             feeders_power += sum(feeder.info['current_episode_power']) * self.dt_min / 60
         for pv in self.node.pvs:
@@ -331,16 +349,18 @@ class GymPowerVoltageEnv(gym.Env):
             print('Feeders power cost = %.2f, PV power cost = %.2f, EVs welfare = % .2f' %
                   (feeders_price, pvs_price, evs_welfare.sum()))
             print('Total social welfare = %.2f' % (sum(self.current_episode_statistics['social_welfare'])))
+
         results_dict = {'evs_soc': evs_soc_ratio.mean(), 'evs_welfare': evs_welfare.sum(),
                         'power_price': feeders_price + pvs_price,
                         'social_welfare': sum(self.current_episode_statistics['social_welfare'])}
+
         return results_dict
 
-    # def plot_grid(self, bbox=(0, 0, 500, 500), margin=30, save=False, path_to_figures=None, title=None):
-    #     graph = _make_graph(self)
-    #     if save:
-    #         assert path_to_figures is not None, 'Specify path_to_figures to save the plot!'
-    #         assert title is not None, 'Specify title to save the plot!'
-    #         return igraph.plot(graph, path_to_figures + title + '.png', bbox=bbox, margin=margin)
-    #     else:
-    #         return igraph.plot(graph, bbox=bbox, margin=margin)
+    def plot_grid(self, bbox=(0, 0, 500, 500), margin=30, save=False, path_to_figures=None, title=None):
+        graph = _make_graph(self)
+        if save:
+            assert path_to_figures is not None, 'Specify path_to_figures to save the plot!'
+            assert title is not None, 'Specify title to save the plot!'
+            return igraph.plot(graph, path_to_figures + title + '.png', bbox=bbox, margin=margin)
+        else:
+            return igraph.plot(graph, bbox=bbox, margin=margin)
