@@ -8,7 +8,7 @@ This repository contains code for simulating the EV charging problem in DC grids
 pip install -r requirements.txt
 ```
 
-On macOS also run: `brew install ipopt`.
+On macOS also run: `brew install ipopt pkg-config cairo glpk`.
 
 ## Some documentation
 
