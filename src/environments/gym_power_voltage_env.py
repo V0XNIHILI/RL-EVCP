@@ -31,6 +31,33 @@ class GymPowerVoltageEnv(gym.Env):
         self.current_episode_statistics = {}
         self.allowed_uncertainties = ['deterministic', 'monthly scenarios', 'monthly average']
 
+        self.observation_space = spaces.Box(
+            low = np.concatenate((
+                np.full(self.n_devices, -5),  # p_min
+                np.full(self.n_devices, 0),   # p_max
+                np.full(self.n_devices, 300), # v_min
+                np.full(self.n_devices, 400), # v_max
+                np.full(self.n_devices, 0),   # u
+            )),
+            high = np.concatenate((
+                np.full(self.n_devices, 0),   # p_min
+                np.full(self.n_devices, 10),  # p_max
+                np.full(self.n_devices, 300), # v_min
+                np.full(self.n_devices, 400), # v_max
+                np.full(self.n_devices, 1.5), # u
+            )),
+        )
+        self.action_space = spaces.Box(
+            low = np.concatenate((
+                np.full(self.n_devices, -5),
+                np.full(self.n_devices, 300)
+            )),
+            high = np.concatenate((
+                np.full(self.n_devices, 10),
+                np.full(self.n_devices, 400)
+            ))
+        )
+
     def _setup_config(self, config):
         self.config = config
         self.t0_hr = config['t0_hr']
@@ -114,18 +141,22 @@ class GymPowerVoltageEnv(gym.Env):
     def compute_current_state(self):
         """ Computes nodal power and voltage lower and upper bounds and nodal utility coefficients
             for the current timestep. """
-        observation = []
+        p_min_observations = []
+        p_max_observations = []
+        v_min_observations = []
+        v_max_observations = []
+        u_observations = []
         for device in self.devices:
             p_min_d, p_max_d = device.p_min, device.p_max
             v_min_d, v_max_d = device.v_min, device.v_max
             u_d = device.utility_coef
-            observation.append(p_min_d)
-            observation.append(p_max_d)
-            observation.append(v_min_d)
-            observation.append(v_max_d)
-            observation.append(u_d)
+            p_min_observations.append(p_min_d)
+            p_max_observations.append(p_max_d)
+            v_min_observations.append(v_min_d)
+            v_max_observations.append(v_max_d)
+            u_observations.append(u_d)
 
-        return np.array(observation)
+        return np.concatenate((p_min_observations, p_max_observations, v_min_observations, v_max_observations, u_observations), axis=0)
 
     def compute_full_state(self, uncertainty='deterministic', n_scenarios=10, target_dt_min=None):
         """ Computes nodal power and voltage lower and upper bounds and nodal utility coefficients
