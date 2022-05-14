@@ -1,4 +1,4 @@
-from src.timedata_util import t_hr_to_t_str, t_str_to_t_hr
+from src.utils.timedata import t_hr_to_t_str, t_str_to_t_hr
 from src.samplers.time_series_sampler import TimeSeriesSampler
 from src.devices.device import Device
 import numpy as np

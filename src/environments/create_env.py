@@ -1,5 +1,5 @@
 from src.environments.example_grids.ieee16grid import create_iee16_grid
-from src.timedata_util import t_min_to_t_str, t_str_to_t_hr
+from src.utils.timedata import t_min_to_t_str, t_str_to_t_hr
 import numpy as np
 
 

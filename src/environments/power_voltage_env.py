@@ -1,4 +1,4 @@
-from src.timedata_util import t_hr_to_t_str, create_timesteps_hr, round_t_hr, split_dates_train_and_test_monthly
+from src.utils.timedata import t_hr_to_t_str, create_timesteps_hr, round_t_hr, split_dates_train_and_test_monthly
 from src.environments.visualization import _make_graph
 from src.devices.device import Device
 from collections import defaultdict

@@ -1,4 +1,4 @@
-from src.timedata_util import shift_date, t_min_to_t_str, t_hr_to_t_str, create_timesteps_hr, round_t_hr
+from src.utils.timedata import shift_date, t_min_to_t_str, t_hr_to_t_str, create_timesteps_hr, round_t_hr
 from typing import List, Dict
 import pandas as pd
 import numpy as np

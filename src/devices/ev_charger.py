@@ -1,6 +1,6 @@
 import pandas as pd
 
-from src.timedata_util import create_timesteps_hr, t_str_to_t_hr, t_hr_to_t_str
+from src.utils.timedata import create_timesteps_hr, t_str_to_t_hr, t_hr_to_t_str
 from src.samplers.ev_session_sampler import EVSessionSampler
 from src.devices.device import Device
 from src.devices.ev import EV
