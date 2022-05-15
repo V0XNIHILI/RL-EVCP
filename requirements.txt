@@ -3,3 +3,6 @@ pyomo
 igraph
 matplotlib
 numpy
+
+dm_tree
+pytorch
