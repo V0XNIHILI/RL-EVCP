@@ -3,3 +3,7 @@ pyomo
 igraph
 matplotlib
 numpy
+ray[rllib]
+redis
+pandas
+torch
