@@ -3,9 +3,12 @@ pyomo
 igraph
 matplotlib
 numpy
+gym==0.21.0
 dm_tree
 pytorch
 ray[rllib]
 redis
 pandas
 torch
+lz4
+tensorboard

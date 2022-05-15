@@ -19,6 +19,7 @@ tune.run(
     # https://docs.ray.io/en/latest/rllib/rllib-algorithms.html#ddpg
     config={
         "env": "Pendulum-v1",
+        "framework": "torch",
         "num_gpus":0,
         "num_workers":1,
         "lr":tune.grid_search([0.01, 0.001, 0.0001]),
