@@ -17,7 +17,7 @@ SUPPORTED_GRIDS = ['ieee16']
 
 
 def create_env(config, ps_samplers_dict, ps_metadata, canopy_sampler, canopy_metadata,
-               price_sampler, price_metadata, ev_sampler, elaadnl_metadata):
+               price_sampler, price_metadata, ev_sampler, elaadnl_metadata, gym=True):
     # Update samplers (resamples data id dt was changed)\
     dt_min = config['dt_min']
     for sampler in ps_samplers_dict.values():
@@ -37,5 +37,5 @@ def create_env(config, ps_samplers_dict, ps_metadata, canopy_sampler, canopy_met
                                            (grid_to_use,  SUPPORTED_GRIDS)
     if grid_to_use == 'ieee16':
         env = create_iee16_grid(config, ps_samplers_dict, ps_metadata, canopy_sampler, canopy_metadata,
-                                price_sampler, price_metadata, ev_sampler, elaadnl_metadata, basic_arrival_rate)
+                                price_sampler, price_metadata, ev_sampler, elaadnl_metadata, basic_arrival_rate, gym=gym)
     return env

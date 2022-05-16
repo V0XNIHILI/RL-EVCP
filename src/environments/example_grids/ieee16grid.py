@@ -9,7 +9,7 @@ import random
 
 
 def create_iee16_grid(config, ps_samplers_dict, ps_metadata, canopy_sampler, canopy_metadata,
-                      price_sampler, price_metadata, ev_sampler, elaadnl_metadata, basic_arrival_rate):
+                      price_sampler, price_metadata, ev_sampler, elaadnl_metadata, basic_arrival_rate, gym=True):
     # IEEE16 topology
     feeder_inds = [0, 1, 2]
     pv_inds = [16, 17, 18, 19, 20, 21]
@@ -58,5 +58,8 @@ def create_iee16_grid(config, ps_samplers_dict, ps_metadata, canopy_sampler, can
         i_max_matrix[i_from, i_to] = config['i_max']
         i_max_matrix[i_to, i_from] = config['i_max']
     # Create env
-    env = GymPowerVoltageEnv(devices, conductance_matrix, i_max_matrix, config)
+    if gym:
+        env = GymPowerVoltageEnv(devices, conductance_matrix, i_max_matrix, config)
+    else:
+        env = PowerVoltageEnv(devices, conductance_matrix, i_max_matrix, config)
     return env
