@@ -21,11 +21,10 @@ tune.run(
     # Options for the config are in the default DDPG config: 
     # https://docs.ray.io/en/latest/rllib/rllib-algorithms.html#ddpg
     config={
-        "env": "my_env",
+        "env": "Pendulum-v1",
         "framework": "torch",
         "num_gpus":0,
         "num_workers":1,
-        "lr":tune.grid_search([0.01, 0.001, 0.0001]),
     },
 )
 

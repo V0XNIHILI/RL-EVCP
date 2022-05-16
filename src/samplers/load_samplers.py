@@ -5,6 +5,7 @@ import pickle as pickle
 
 
 def load_samplers(config):
+    print(config)
     # Read config
     t0_hr = config['t0_hr']
     dt_min = config['dt_min']

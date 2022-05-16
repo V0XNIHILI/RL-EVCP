@@ -1,6 +1,7 @@
 import os, sys
 
 import gym, ray
+from ray import tune
 from ray.rllib.agents import ppo
 from ray.tune import register_env
 
@@ -12,7 +13,7 @@ from src.samplers.load_samplers import load_samplers
 # path_to_this_notebook = os.path.abspath('.')
 # path_to_project = path_to_this_notebook[:path_to_this_notebook.find('src')]
 # sys.path.append(path_to_project)
-config = {'path_to_data':   './data/',
+config = {'path_to_data':   'data/',
           't0_hr': 6.,  # When the episode start (default value 6AM)
           'dt_min': 30,  # Timestep size
           'ev_dt_min': 60,  # Timestep size for EV arrivals
@@ -40,13 +41,13 @@ config = {'path_to_data':   './data/',
           }
 
 
-def env_creator(env_config):
+def env_creator(a):
     # Preload samplers, it is necessary to avoid re-loading data each time env is created
     (ps_samplers_dict, ps_metadata, canopy_sampler, canopy_metadata,
-     price_sampler, price_metadata, ev_sampler, elaadnl_metadata) = load_samplers(env_config)
+     price_sampler, price_metadata, ev_sampler, elaadnl_metadata) = load_samplers(config)
 
     return create_env(
-        env_config,
+        config,
         ps_samplers_dict,
         ps_metadata,
         canopy_sampler,
@@ -61,14 +62,32 @@ def env_creator(env_config):
 # Read this on how to run our own environments
 # https://docs.ray.io/en/latest/rllib/rllib-env.html
 
-# ray.init()
+ray.init()
 register_env("my_env", env_creator)
 
+tune.run(
+    "DDPG",
 
-trainer = ppo.PPOTrainer(env="my_env", config={
-    "env_config": config,  # config to pass to env class
-    "framework": "torch",
-})
+    # Stopping condition
+    stop={"episode_reward_mean":200},
 
-while True:
-    print(trainer.train())
+    # Config
+    # The default DDPG specific config is used with required 
+    # Options for the config are in the default DDPG config: 
+    # https://docs.ray.io/en/latest/rllib/rllib-algorithms.html#ddpg
+    config={
+        "env": "my_env",
+        "framework": "torch",
+        "num_gpus":0,
+        "num_workers":1,
+    },
+)
+
+
+# trainer = ppo.PPOTrainer(env="my_env", config={
+#     "env_config": config,  # config to pass to env class
+#     "framework": "torch",
+# })
+
+# while True:
+#     print(trainer.train())
