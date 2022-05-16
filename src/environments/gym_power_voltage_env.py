@@ -148,25 +148,19 @@ class GymPowerVoltageEnv(gym.Env):
     def compute_current_state(self):
         """ Computes nodal power and voltage lower and upper bounds and nodal utility coefficients
             for the current timestep. """
-
-        p_min_observations = []
-        p_max_observations = []
-        v_min_observations = []
-        v_max_observations = []
-        u_observations = []
-
+        p_lbs_t, p_ubs_t, v_lbs_t, v_ubs_t, u_t = [], [], [], [], []
         for device in self.devices:
             p_min_d, p_max_d = device.p_min, device.p_max
             v_min_d, v_max_d = device.v_min, device.v_max
             u_d = device.utility_coef
+            p_lbs_t.append(p_min_d)
+            p_ubs_t.append(p_max_d)
+            v_lbs_t.append(v_min_d)
+            v_ubs_t.append(v_max_d)
+            u_t.append(u_d)
 
-            p_min_observations.append(p_min_d)
-            p_max_observations.append(p_max_d)
-            v_min_observations.append(v_min_d)
-            v_max_observations.append(v_max_d)
-            u_observations.append(u_d)
-
-        return np.concatenate((p_min_observations, p_max_observations, v_min_observations, v_max_observations, u_observations), axis=0)
+        # concatenating all arrays instead of returning a tuple of arrays
+        return np.concatenate((p_lbs_t, p_ubs_t, v_lbs_t, v_ubs_t, u_t), axis=0)
 
     def compute_full_state(self, uncertainty='deterministic', n_scenarios=10, target_dt_min=None):
         """ Computes nodal power and voltage lower and upper bounds and nodal utility coefficients
@@ -270,6 +264,7 @@ class GymPowerVoltageEnv(gym.Env):
         return i_constraints_violation, power_flow_constraints_violation
 
     def step(self, action):
+        # give 1 array with p,v instead of 2
         p = action[:self.n_devices]
         v = action[self.n_devices:]
 
@@ -314,6 +309,7 @@ class GymPowerVoltageEnv(gym.Env):
                   'p': p,
                   'v': v }
 
+        # return in gym format, result is now the info part of result
         return self.compute_current_state(), reward, self.done, result
 
     def compute_result(self, do_print=False):
