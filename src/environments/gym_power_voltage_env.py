@@ -35,18 +35,18 @@ class GymPowerVoltageEnv(gym.Env):
 
         self.observation_space = spaces.Box(
             low = np.concatenate((
-                np.full(self.n_devices, -5),  # p_min
-                np.full(self.n_devices, 0),   # p_max
-                np.full(self.n_devices, 300), # v_min
-                np.full(self.n_devices, 400), # v_max
-                np.full(self.n_devices, 0),   # u
+                np.full(self.n_devices, -5),  # p_min -5
+                np.full(self.n_devices, 0),   # p_max 0
+                np.full(self.n_devices, 300), # v_min 300
+                np.full(self.n_devices, 400), # v_max 400
+                np.full(self.n_devices, -1),   # u     0
             )),
             high = np.concatenate((
-                np.full(self.n_devices, 0),   # p_min
-                np.full(self.n_devices, 10),  # p_max
-                np.full(self.n_devices, 300), # v_min
-                np.full(self.n_devices, 400), # v_max
-                np.full(self.n_devices, 1.5), # u
+                np.full(self.n_devices, 0),   # p_min 0
+                np.full(self.n_devices, 10),  # p_max 10
+                np.full(self.n_devices, 300), # v_min 300
+                np.full(self.n_devices, 400), # v_max 400
+                np.full(self.n_devices, 1.5), # u     1.5
             )),
         )
 
@@ -317,7 +317,7 @@ class GymPowerVoltageEnv(gym.Env):
     def compute_result(self, do_print=False):
         assert self.done, 'Compute result should only be called when env is done!'
 
-        evs_soc_achieved = []
+        evs_soc_achieved = []   
         evs_soc_maximum = []
         evs_utility_coefs = []
 
