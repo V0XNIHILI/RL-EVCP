@@ -40,25 +40,27 @@ class GymPowerVoltageEnv(gym.Env):
                 np.full(self.n_devices, 300), # v_min 300
                 np.full(self.n_devices, 400), # v_max 400
                 np.full(self.n_devices, -1),   # u     0
-            )),
+            ), dtype=np.float64),
             high = np.concatenate((
                 np.full(self.n_devices, 0),   # p_min 0
                 np.full(self.n_devices, 10),  # p_max 10
                 np.full(self.n_devices, 300), # v_min 300
                 np.full(self.n_devices, 400), # v_max 400
                 np.full(self.n_devices, 1.5), # u     1.5
-            )),
+            ), dtype=np.float64),
+            dtype=np.float64
         )
 
         self.action_space = spaces.Box(
             low = np.concatenate((
                 np.full(self.n_devices, -5),
                 np.full(self.n_devices, 300)
-            )),
+            ), dtype=np.float64),
             high = np.concatenate((
                 np.full(self.n_devices, 10),
                 np.full(self.n_devices, 400)
-            ))
+            ), dtype=np.float64),
+            dtype=np.float64
         )
 
     def _setup_config(self, config):
@@ -266,11 +268,11 @@ class GymPowerVoltageEnv(gym.Env):
             power_flow_constraints_violation += max(0, abs(p_i_target - p[i]))
 
         return i_constraints_violation, power_flow_constraints_violation
-    
+
     def step(self, action):
         p = action[:self.n_devices]
         v = action[self.n_devices:]
-        
+
         reward = 0
         feeders_power_price = 0
         pvs_power_price = 0
@@ -291,7 +293,7 @@ class GymPowerVoltageEnv(gym.Env):
             elif d.type == 'ev_charger':
                 evs_social_welfare += r
                 self.current_episode_statistics['evs_welfare'].append(r)
-                
+
             reward += r
 
         self.current_episode_statistics['social_welfare'].append(reward)
@@ -301,7 +303,7 @@ class GymPowerVoltageEnv(gym.Env):
             d.update_timestep(self.t_str)
 
         i_constraints_violation, power_flow_constraints_violation = self.compute_constraint_violation(p, v)
-        
+
         result = {'reward': reward,
                   'feeders_power_price': feeders_power_price,
                   'pvs_power_price': pvs_power_price,
