@@ -61,7 +61,7 @@ def env_creator(env_config):
 # Read this on how to run our own environments
 # https://docs.ray.io/en/latest/rllib/rllib-env.html
 
-ray.init()
+# ray.init()
 register_env("my_env", env_creator)
 
 

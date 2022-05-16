@@ -5,7 +5,10 @@ import ray.rllib.agents.ddpg as ddpg
 from ray.rllib.agents.ddpg import DDPGTrainer
 from ray.tune.logger import pretty_print
 
+import our_own_env
+
 ray.init()
+our_own_env.register_env("my_env", our_own_env.env_creator)
 
 tune.run(
     "DDPG",
@@ -18,7 +21,7 @@ tune.run(
     # Options for the config are in the default DDPG config: 
     # https://docs.ray.io/en/latest/rllib/rllib-algorithms.html#ddpg
     config={
-        "env": "Pendulum-v1",
+        "env": "my_env",
         "framework": "torch",
         "num_gpus":0,
         "num_workers":1,
