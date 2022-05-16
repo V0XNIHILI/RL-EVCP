@@ -9,10 +9,10 @@ from src.environments.gym_power_voltage_env import GymPowerVoltageEnv
 from src.samplers.load_samplers import load_samplers
 
 
-path_to_this_notebook = os.path.abspath('.')
-path_to_project = path_to_this_notebook[:path_to_this_notebook.find('note')]
-sys.path.append(path_to_project)
-config = {'path_to_data': path_to_project + '/data/',
+# path_to_this_notebook = os.path.abspath('.')
+# path_to_project = path_to_this_notebook[:path_to_this_notebook.find('src')]
+# sys.path.append(path_to_project)
+config = {'path_to_data':   './data/',
           't0_hr': 6.,  # When the episode start (default value 6AM)
           'dt_min': 30,  # Timestep size
           'ev_dt_min': 60,  # Timestep size for EV arrivals
