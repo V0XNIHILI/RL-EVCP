@@ -1,7 +1,7 @@
 from src.utils.timedata import split_dates_train_and_test_monthly
 from src.samplers.time_series_sampler import TimeSeriesSampler
 from src.samplers.ev_session_sampler import EVSessionSampler
-import pickle
+import pickle5 as pickle
 
 
 def load_samplers(config):
