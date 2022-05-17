@@ -299,9 +299,6 @@ class GymPowerVoltageEnv(gym.Env):
 
         i_constraints_violation, power_flow_constraints_violation = self.compute_constraint_violation(p, v)
 
-        if self.config['constraint_violation_mode'] == 'reward':
-            reward -= i_constraints_violation * 100 + power_flow_constraints_violation * 100
-
         result = {'reward': reward,
                   'feeders_power_price': feeders_power_price,
                   'pvs_power_price': pvs_power_price,

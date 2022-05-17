@@ -15,14 +15,12 @@ class FeederDevice(Device):
                  v_internal_min: float = 300,
                  v_internal_max: float = 400,
                  p_internal_min: float = -10,
-                 p_internal_max: float = 0,
-                 constraint_violation_mode: str = 'ignore'):
+                 p_internal_max: float = 0):
 
         super().__init__(name, t0_hr, dt_min, sampler, utility_coef, v_internal_min,
                          v_internal_max, p_internal_min, p_internal_max)
         self.type = 'feeder'
         self.allowed_uncertainties = ['deterministic', 'monthly scenarios', 'monthly average']
-        self.constraint_violation_mode = constraint_violation_mode
 
     def reset(self, date):
         day_data = self.sampler.sample_day_data(date, self.type)
@@ -41,22 +39,16 @@ class FeederDevice(Device):
         self.info['current_t_hr'] = t_str_to_t_hr(t_str)
 
     def update_power_and_voltage(self, p, v):
-        # assert self.p_min - 1e-5 <= p <= self.p_max + 1e-5, \
-        #     'Device %s received p which is out of bounds: %.2f' % (self, p)
-        # assert self.v_min - 1e-5 <= v <= self.v_max + 1e-5, \
-        #     'Device %s received v which is out of bounds: %.2f' % (self, v)
-        reward_modifier = 0
-        if self.constraint_violation_mode == 'reward':
-            if not (self.p_min - 1e-5 <= p <= self.p_max + 1e-5):
-                reward_modifier = -100
-            if not (self.v_min - 1e-5 <= v <= self.v_max + 1e-5):
-                reward_modifier = -100
+        assert self.p_min - 1e-5 <= p <= self.p_max + 1e-5, \
+            'Device %s received p which is out of bounds: %.2f' % (self, p)
+        assert self.v_min - 1e-5 <= v <= self.v_max + 1e-5, \
+            'Device %s received v which is out of bounds: %.2f' % (self, v)
         p = min(max(self.p_min, p), self.p_max)
         v = min(max(self.v_min, v), self.v_max)
         r = self.utility_coef * p * self.dt_min / 60
         self.info['current_episode_power'].append(p)
         self.info['current_episode_voltage'].append(v)
-        return r +  reward_modifier
+        return r
 
     def get_p_bounds(self, t_str, target_dt_min=None, uncertainty='deterministic'):
         assert uncertainty in self.allowed_uncertainties, 'Unknown uncertainty %s' % uncertainty
