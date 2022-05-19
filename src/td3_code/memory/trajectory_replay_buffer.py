@@ -1,5 +1,5 @@
-from src.rl.memory.episode_trajectory import EpisodeTrajectory
-from src.rl.memory.replay_buffer import ReplayBuffer
+from src.td3_code.memory.episode_trajectory import EpisodeTrajectory
+from src.td3_code.memory.replay_buffer import ReplayBuffer
 import numpy as np
 
 

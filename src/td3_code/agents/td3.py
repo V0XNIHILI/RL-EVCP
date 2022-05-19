@@ -1,6 +1,6 @@
-from src.rl.networks.dp_critics import LSTMCritic, MLPCritic
-from src.rl.networks.dp_actors import LSTMActor, MLPActor
-from src.rl.util import parse_sample_dict
+from src.td3_code.networks.dp_critics import LSTMCritic, MLPCritic
+from src.td3_code.networks.dp_actors import LSTMActor, MLPActor
+from src.td3_code.util import parse_sample_dict
 import torch.nn.functional as F
 import torch
 import copy
