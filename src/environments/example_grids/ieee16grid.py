@@ -29,24 +29,24 @@ def create_iee16_grid(config, ps_samplers_dict, ps_metadata, canopy_sampler, can
     feeders = []
     for f_ind in feeder_inds:
         feeders.append(FeederDevice('Feeder%d' % f_ind, config['t0_hr'], config['dt_min'], price_sampler,
-                                    p_internal_min=config['feeder_p_min'], constraint_violation_mode=config['device_constraint_violation_mode']))
+                                    p_internal_min=config['feeder_p_min']))
         devices[f_ind] = feeders[-1]
     pvs = []
     for ind, pv_ind in enumerate(pv_inds):
         hid = hids_for_pvs[ind]
         pvs.append(PVDevice('PV_%s' % pv_ind, config['t0_hr'], config['dt_min'], ps_samplers_dict[hid], 0,
-                            p_internal_min=-config['ps_pvs_rated_power'], constraint_violation_mode=config['device_constraint_violation_mode']))
+                            p_internal_min=-config['ps_pvs_rated_power']))
         devices[pv_ind] = pvs[-1]
     loads = []
     for ind, load_ind in enumerate(load_inds):
         hid = hids_for_loads[ind]
-        loads.append(LoadDevice('Load_%s' % load_ind,  config['t0_hr'], config['dt_min'], ps_samplers_dict[hid], constraint_violation_mode=config['device_constraint_violation_mode']))
+        loads.append(LoadDevice('Load_%s' % load_ind,  config['t0_hr'], config['dt_min'], ps_samplers_dict[hid]))
         devices[load_ind] = loads[-1]
     ev_chargers = []
     for ev_charger_ind in ev_charger_inds:
         ev_chargers.append(EVChargerDevice('EVCharger%d' % ev_charger_ind, config['t0_hr'], config['dt_min'],
                                            config['ev_dt_min'], ev_sampler,
-                                           basic_arrival_rate * config['avg_evs_per_day'], constraint_violation_mode=config['device_constraint_violation_mode']))
+                                           basic_arrival_rate * config['avg_evs_per_day']))
         devices[ev_charger_ind] = ev_chargers[-1]
 
     # Create topology

@@ -52,7 +52,7 @@ class PVDevice(Device):
         r = self.utility_coef * p * self.dt_min / 60
         self.info['current_episode_power'].append(p)
         self.info['current_episode_voltage'].append(v)
-        return r + reward_modifier
+        return r
 
     def get_utility_coef(self, t_str, target_dt_min=None, uncertainty='deterministic'):
         return [self.utility_coef]
