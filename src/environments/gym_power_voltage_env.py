@@ -22,8 +22,8 @@ class GymPowerVoltageEnv(gym.Env):
         self._setup_devices(devices)
         self.t_ind = None
         self.episode_index = -1
-        self.conductance_matrix = conductance_matrix
-        self.i_max_matrix = i_max_matrix
+        self.conductance_matrix = conductance_matrix.astype(dtype='float32')
+        self.i_max_matrix = i_max_matrix.astype(dtype='float32')
 
         assert np.shape(conductance_matrix) == (self.n_devices, self.n_devices),\
             'Wrong shape of conductance_matrix %s' % (np.shape(conductance_matrix))
@@ -40,27 +40,27 @@ class GymPowerVoltageEnv(gym.Env):
                 np.full(self.n_devices, 300), # v_min 300
                 np.full(self.n_devices, 400), # v_max 400
                 np.full(self.n_devices, -1),   # u     0
-            ), dtype=np.float64),
+            ), dtype=np.float32),
             high = np.concatenate((
                 np.full(self.n_devices, 0),   # p_min 0
                 np.full(self.n_devices, 10),  # p_max 10
                 np.full(self.n_devices, 300), # v_min 300
                 np.full(self.n_devices, 400), # v_max 400
                 np.full(self.n_devices, 1.5), # u     1.5
-            ), dtype=np.float64),
-            dtype=np.float64
+            ), dtype=np.float32),
+            dtype=np.float32
         )
 
         self.action_space = spaces.Box(
             low = np.concatenate((
                 np.full(self.n_devices, -5),
                 np.full(self.n_devices, 300)
-            ), dtype=np.float64),
+            ), dtype=np.float32),
             high = np.concatenate((
                 np.full(self.n_devices, 10),
                 np.full(self.n_devices, 400)
-            ), dtype=np.float64),
-            dtype=np.float64
+            ), dtype=np.float32),
+            dtype=np.float32
         )
 
     def _setup_config(self, config):
@@ -160,7 +160,7 @@ class GymPowerVoltageEnv(gym.Env):
             u_t.append(u_d)
 
         # concatenating all arrays instead of returning a tuple of arrays
-        return np.concatenate((p_lbs_t, p_ubs_t, v_lbs_t, v_ubs_t, u_t), axis=0)
+        return np.concatenate((p_lbs_t, p_ubs_t, v_lbs_t, v_ubs_t, u_t), axis=0, dtype='float32')
 
     def compute_full_state(self, uncertainty='deterministic', n_scenarios=10, target_dt_min=None):
         """ Computes nodal power and voltage lower and upper bounds and nodal utility coefficients
