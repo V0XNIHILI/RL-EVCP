@@ -41,10 +41,10 @@ class LoadDevice(Device):
         self.p_min, self.p_max = p_demand_t, p_demand_t
 
     def update_power_and_voltage(self, p, v):
-        # assert self.p_min - 1e-5 <= p <= self.p_max + 1e-5, \
-        #     'Device %s received p which is out of bounds: %.2f' % (self, p)
-        # assert self.v_min - 1e-5 <= v <= self.v_max + 1e-5, \
-        #     'Device %s received v which is out of bounds: %.2f' % (self, v)
+        assert self.p_min - 1e-5 <= p <= self.p_max + 1e-5, \
+            'Device %s received p which is out of bounds: %.2f' % (self, p)
+        assert self.v_min - 1e-5 <= v <= self.v_max + 1e-5, \
+            'Device %s received v which is out of bounds: %.2f' % (self, v)
 
         p = min(max(self.p_min, p), self.p_max)
         v = min(max(self.v_min, v), self.v_max)
