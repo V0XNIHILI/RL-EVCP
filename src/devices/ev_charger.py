@@ -71,19 +71,33 @@ class EVChargerDevice(Device):
             self.utility_coef = ev.utility_coef
 
     def update_power_and_voltage(self, p, v, target_dt_min=None, method=np.mean):
-        assert self.p_min - 1e-5 <= p <= self.p_max + 1e-5, \
-            'Device %s received p which is out of bounds: %.2f' % (self, p)
-        assert self.v_min - 1e-5 <= v <= self.v_max + 1e-5, \
-            'Device %s received v which is out of bounds: %.2f' % (self, v)
+        # assert self.p_min - 1e-5 <= p <= self.p_max + 1e-5, \
+        #     'Device %s received p which is out of bounds: %.2f' % (self, p)
+        # assert self.v_min - 1e-5 <= v <= self.v_max + 1e-5, \
+        #     'Device %s received v which is out of bounds: %.2f' % (self, v)
 
         p = min(max(self.p_min, p), self.p_max)
         v = min(max(self.v_min, v), self.v_max)
         reward = 0
+        overcharging = 0
         if self.info['active_ev'] is not None:
-            reward = self.info['active_ev'].charge(p * self.dt_min / 60)
+            reward, overcharging = self.info['active_ev'].charge(p * self.dt_min / 60)
         self.info['current_episode_power'].append(p)
         self.info['current_episode_voltage'].append(v)
-        return reward
+
+
+        # violation is the relative power and voltage violation
+        violation = overcharging
+        if self.p_min - 1e-5 <= p:
+            violation += (self.p_min - p)
+        if p <= self.p_max + 1e-5:
+            violation += (p - self.p_max)
+        if self.v_min - 1e-5 <= v:
+            violation += (self.v_min - v)
+        if p <= self.v_max + 1e-5:
+            violation += (v - self.v_max)
+
+        return reward, violation
 
     def get_utility_coef(self, t_str, target_dt_min=None, uncertainty='deterministic'):
         ev_ind = self.info['current_episode_data'][t_str]

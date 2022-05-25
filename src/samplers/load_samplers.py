@@ -21,6 +21,7 @@ def load_samplers(config):
 
     # Pecan Street data
     with open(path_to_data + '/pecanstreet/metadata_dict.pickle', 'rb') as f:
+        print("loading pecanstreet")
         ps_metadata = pickle.load(f, )
 
     ps_all_dates = None
@@ -34,6 +35,7 @@ def load_samplers(config):
     # Canopy data
     path_to_canopy_data = path_to_data + '/pvdata.nist.gov/'
     with open(path_to_data + '/pvdata.nist.gov/metadata_dict.pickle', 'rb') as f:
+        print("loading pvdata")
         canopy_metadata = pickle.load(f, )
     canopy_all_dates = canopy_metadata['dates']
     canopy_dates_train, canopy_dates_test = split_dates_train_and_test_monthly(canopy_all_dates, days_per_month_train)
@@ -43,12 +45,14 @@ def load_samplers(config):
     # ElaadNL data
     path_to_elaadnl_data = path_to_data + '/elaadnl/'
     with open(path_to_data + '/elaadnl/metadata_dict.pickle', 'rb') as f:
+        print("loading elaadnl")
         elaadnl_metadata = pickle.load(f, )
     ev_arrivals_per_minute = elaadnl_metadata['arrival_counts']
 
     # New York price data
     path_to_price_data = path_to_data + '//newyork_price/'
     with open(path_to_price_data + '/metadata_dict.pickle', 'rb') as f:
+        print("loading newyork_price")
         price_metadata = pickle.load(f, )
 
     price_all_dates = price_metadata['dates']

@@ -252,7 +252,7 @@ class GymPowerVoltageEnv(gym.Env):
                 g = self.conductance_matrix[d_from_ind, d_to_ind]
                 i = (v[d_to_ind] - v[d_from_ind]) * g
                 i_max = self.i_max_matrix[d_from_ind, d_to_ind]
-                i_constraints_violation += max(0, abs(i) - abs(i_max))
+                i_constraints_violation += max(0, (abs(i) - abs(i_max)))
 
         power_flow_constraints_violation = 0
 
@@ -273,9 +273,14 @@ class GymPowerVoltageEnv(gym.Env):
         pvs_power_price = 0
         loads_social_welfare = 0
         evs_social_welfare = 0
+        total_violation = 0
 
         for d_ind, d in enumerate(self.devices):
-            r = d.update_power_and_voltage(p[d_ind], v[d_ind])
+            r, violation = d.update_power_and_voltage(p[d_ind], v[d_ind])
+
+            #print(d.type)
+            #print(r)
+            #print(violation)
 
             if d.type == 'feeder':
                 self.current_episode_statistics['feeders_price'].append(r)
@@ -290,8 +295,10 @@ class GymPowerVoltageEnv(gym.Env):
                 self.current_episode_statistics['evs_welfare'].append(r)
 
             reward += r
+            total_violation += total_violation
 
         self.current_episode_statistics['social_welfare'].append(reward)
+        self.current_episode_statistics['total_device_violation'].append(total_violation)
         self.t_ind += 1
 
         for d in self.devices:
@@ -306,11 +313,16 @@ class GymPowerVoltageEnv(gym.Env):
                   'evs_social_welfare': evs_social_welfare,
                   'i_constraints_violation': i_constraints_violation,
                   'power_flow_constraints_violation': power_flow_constraints_violation,
+                  'total_device_violation': total_violation,
                   'p': p,
                   'v': v }
 
+        train_reward = -i_constraints_violation - power_flow_constraints_violation - total_violation
+        if i_constraints_violation <= 1e-5 and power_flow_constraints_violation <= 1e-5 and total_violation <= 1e-5:
+            train_reward += reward
+
         # return in gym format, result is now the info part of result
-        return self.compute_current_state(), reward, self.done, result
+        return self.compute_current_state(), train_reward, self.done, result
 
     def compute_result(self, do_print=False):
         assert self.done, 'Compute result should only be called when env is done!'

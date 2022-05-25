@@ -39,16 +39,28 @@ class FeederDevice(Device):
         self.info['current_t_hr'] = t_str_to_t_hr(t_str)
 
     def update_power_and_voltage(self, p, v):
-        assert self.p_min - 1e-5 <= p <= self.p_max + 1e-5, \
-            'Device %s received p which is out of bounds: %.2f' % (self, p)
-        assert self.v_min - 1e-5 <= v <= self.v_max + 1e-5, \
-            'Device %s received v which is out of bounds: %.2f' % (self, v)
+        # assert self.p_min - 1e-5 <= p <= self.p_max + 1e-5, \
+        #     'Device %s received p which is out of bounds: %.2f' % (self, p)
+        # assert self.v_min - 1e-5 <= v <= self.v_max + 1e-5, \
+        #     'Device %s received v which is out of bounds: %.2f' % (self, v)
         p = min(max(self.p_min, p), self.p_max)
         v = min(max(self.v_min, v), self.v_max)
         r = self.utility_coef * p * self.dt_min / 60
         self.info['current_episode_power'].append(p)
         self.info['current_episode_voltage'].append(v)
-        return r
+
+        # violation is the relative power and voltage violation
+        violation = 0
+        if self.p_min - 1e-5 <= p:
+            violation += (self.p_min - p)
+        if p <= self.p_max + 1e-5:
+            violation += (p - self.p_max)
+        if self.v_min - 1e-5 <= v:
+            violation += (self.v_min - v)
+        if p <= self.v_max + 1e-5:
+            violation += (v - self.v_max)
+
+        return r, violation
 
     def get_p_bounds(self, t_str, target_dt_min=None, uncertainty='deterministic'):
         assert uncertainty in self.allowed_uncertainties, 'Unknown uncertainty %s' % uncertainty

@@ -49,4 +49,9 @@ class EV:
                                                                                                            new_soc)
         new_soc = min(new_soc, self.soc_max)
         self.current_soc = new_soc
-        return self.charge_coef * p_kwh * self.utility_coef
+
+        violation = 0
+        if new_soc <= self.soc_max + 1e5:
+            violation += (new_soc - self.soc_max)
+
+        return self.charge_coef * p_kwh * self.utility_coef, violation
