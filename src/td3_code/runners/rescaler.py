@@ -10,5 +10,16 @@ takes in:
 outputs:
     - Tensor of actions rescaled between p_min, p_max (first half) and v_min, v_max (second half)
 """
-def rescale(action, p_min, p_max, v_min, v_max):
-    return action
+def rescale(p, v, p_min, p_max, v_min, v_max):
+    new_p = p.copy()
+    new_v = v.copy()
+    new_p = (new_p + 1) / 2
+    new_v = (new_v + 1) / 2
+
+    p_diff = p_max - p_min
+    v_diff = v_max - v_min
+
+    new_p = (new_p * p_diff) + p_min
+    new_v = (new_v * v_diff) + v_min
+
+    return new_p, new_v

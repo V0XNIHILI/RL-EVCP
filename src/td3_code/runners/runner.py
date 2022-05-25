@@ -3,6 +3,8 @@ import time
 import numpy as np
 import torch
 
+from .rescaler import rescale
+
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -48,8 +50,14 @@ class Runner:
             action, hidden_state = self.agent.select_action(torch.tensor(obs).reshape((1, 1, -1)).to(DEVICE),
                                                             hidden_state, noisy=train, use_target=False)
             action = action.cpu().detach().numpy().reshape(-1)
+            reshaped_action = action.reshape(2, -1)
+            reshaped_observation = obs.reshape(5, -1)
+            p, v = reshaped_action[0], reshaped_action[1]
+            p_min, p_max, v_min, v_max = reshaped_observation[0], reshaped_observation[1], reshaped_observation[2], reshaped_observation[3]
+            p, v = rescale(p, v, p_min, p_max, v_min, v_max)
+            new_action = np.concatenate((p,v), axis=0)
             t = time.time()
-            obs_next, reward, done, _ = self.env.step(action)
+            obs_next, reward, done, _ = self.env.step(new_action)
             episode_results['env_time'] += time.time() - t
             episode_results['reward'] += np.float(reward)
             episode_results['length'] += 1
