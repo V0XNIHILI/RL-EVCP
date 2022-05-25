@@ -36,12 +36,13 @@ class Runner:
         self.memory = memory
         self.agent = agent
 
-    def run(self, train=True, save_to_memory=True, train_bath_size=128):
+    def run(self, train=True, save_to_memory=True, train_bath_size=128, final=False):
         obs = self.env.reset()
         hidden_state = self.agent.actor.get_initial_state(1)
         done = False
         reset_mask = True
         episode_results = {'reward': 0, 'length': 0, 'env_time': 0, 'sampling_time': 0, 'training_time': 0, }
+        final_results_list = []
         if save_to_memory:
             self.memory.start_episode()
         while not done:
@@ -49,7 +50,7 @@ class Runner:
                                                             hidden_state, noisy=train, use_target=False)
             action = action.cpu().detach().numpy().reshape(-1)
             t = time.time()
-            obs_next, reward, done, _ = self.env.step(action)
+            obs_next, reward, done, result = self.env.step(action)
             episode_results['env_time'] += time.time() - t
             episode_results['reward'] += np.float(reward)
             episode_results['length'] += 1
@@ -74,6 +75,8 @@ class Runner:
                 self.agent.train(observations_extended, actions, rewards, dones, reset_mask_extended)
                 # print('Running training')
                 episode_results['training_time'] += time.time() - t
+            if final:
+                final_results_list.append(result)
             obs = obs_next
             reset_mask = bool(done)
-        return episode_results
+        return episode_results, final_results_list
