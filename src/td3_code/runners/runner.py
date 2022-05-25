@@ -79,4 +79,8 @@ class Runner:
                 final_results_list.append(result)
             obs = obs_next
             reset_mask = bool(done)
-        return episode_results, final_results_list
+
+        if final:
+            return episode_results, final_results_list
+        else:
+            return episode_results
