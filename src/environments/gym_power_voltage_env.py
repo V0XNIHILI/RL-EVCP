@@ -132,13 +132,21 @@ class GymPowerVoltageEnv(gym.Env):
             self.episode_index += 1
         else:
             self.episode_index = episode_index
+
         for device in self.devices:
             if device.type == 'ev_charger':
                 device.reset()
             else:
-                train_or_test = 'train' if train else 'test'
-                list_of_dates = self.device_to_dates[device][train_or_test]
-                date = list_of_dates[self.episode_index % len(list_of_dates)]
+                if self.config['split_train_test']:
+                    train_or_test = 'train' if train else 'test'
+                    list_of_dates = self.device_to_dates[device][train_or_test]
+                    index = self.episode_index % min(len(list_of_dates), self.config['dataset_max_size'])
+                    print(f"Reseting episode to index: {index}")
+                    date = list_of_dates[index]
+                else:
+                    index = self.episode_index % min(len(device.sampler.dates), self.config['dataset_max_size'])
+                    print(f"Reseting episode to index: {index}")
+                    date = device.sampler.dates[index]
                 device.reset(date)
 
         self.current_episode_statistics = defaultdict(list)
@@ -267,6 +275,10 @@ class GymPowerVoltageEnv(gym.Env):
         # give 1 array with p,v instead of 2
         p = action[:self.n_devices]
         v = action[self.n_devices:]
+
+        # print("step")
+        # print(p)
+        # print(v)
 
         reward = 0
         feeders_power_price = 0
