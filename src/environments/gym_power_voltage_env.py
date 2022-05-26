@@ -79,6 +79,8 @@ class GymPowerVoltageEnv(gym.Env):
 
     def _setup_config(self, config):
         self.config = config
+        self.use_constraint_projection = config['use_constraint_projection']
+        self.normalize_outputs = config['normalize_environment_outputs']
         self.t0_hr = config['t0_hr']
         self.t0_str = t_hr_to_t_str(config['t0_hr'])
         self.dt_min = config['dt_min']
@@ -340,7 +342,7 @@ class GymPowerVoltageEnv(gym.Env):
                   'v': v }
 
         # return in gym format, result is now the info part of result
-        return self.compute_current_state(normalized=True), reward, self.done, result
+        return self.compute_current_state(normalized=self.normalize_outputs), reward, self.done, result
 
     def rescale_action(self, p, v):
         """ [-1, 1] to real lower and upper bound """
