@@ -3,6 +3,8 @@ import time
 import numpy as np
 import torch
 
+from .rescaler import rescale
+
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
