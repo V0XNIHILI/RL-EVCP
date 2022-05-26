@@ -6,6 +6,7 @@ import torch
 class LSTMActor(nn.Module):
 
     def __init__(self, state_dim, action_dim, n_lstm, hidden_dim):
+        print('?')
         super(LSTMActor, self).__init__()
         self.recurrent = False
         self.l1 = nn.LSTM(state_dim, n_lstm, batch_first=True)

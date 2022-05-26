@@ -9,6 +9,7 @@ from gym import spaces
 from src.utils.timedata import t_hr_to_t_str, create_timesteps_hr, round_t_hr, split_dates_train_and_test_monthly
 from src.environments.visualization import _make_graph
 from src.devices.device import Device
+from src.optimization.constraint_projection import project_constraints
 from collections import defaultdict
 
 class GymPowerVoltageEnv(gym.Env):
@@ -76,6 +77,7 @@ class GymPowerVoltageEnv(gym.Env):
         self.p_max = np.full(self.n_devices, 10)
         self.v_min = np.full(self.n_devices, 300)
         self.v_max = np.full(self.n_devices, 400)
+        self.u = np.full(self.n_devices, 0)
 
     def _setup_config(self, config):
         self.config = config
@@ -180,6 +182,8 @@ class GymPowerVoltageEnv(gym.Env):
 
         # update voltage bounds (should be constant?)
         self.v_min, self.v_max = np.array(v_lbs_t), np.array(v_ubs_t)
+
+        self.u = np.array(u_t)
 
         # normalize to [0, 1]
         if normalized:
@@ -299,6 +303,10 @@ class GymPowerVoltageEnv(gym.Env):
 
         # return to real power and voltage based on current bounds
         p, v = self.rescale_action(p_in, v_in)
+
+        if self.use_constraint_projection:
+            p, v, model = project_constraints(p, v, self.n_devices, self.u, self.p_min, 
+                                       self.p_max, self.v_min, self.v_max, self.conductance_matrix, self.i_max_matrix)
 
         reward = 0
         feeders_power_price = 0
