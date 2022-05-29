@@ -39,7 +39,7 @@ class Runner:
         self.agent = agent
 
     def run(self, train=True, save_to_memory=True, train_bath_size=128, final=False):
-        obs = self.env.reset()
+        obs = self.env.reset(train=train)
         hidden_state = self.agent.actor.get_initial_state(1)
         done = False
         reset_mask = True
