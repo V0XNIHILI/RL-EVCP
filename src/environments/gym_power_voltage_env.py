@@ -83,6 +83,7 @@ class GymPowerVoltageEnv(gym.Env):
         self.config = config
         self.use_constraint_projection = config['use_constraint_projection']
         self.normalize_outputs = config['normalize_environment_outputs']
+        self.use_rescaled_actions = config['use_rescaled_actions']
         self.t0_hr = config['t0_hr']
         self.t0_str = t_hr_to_t_str(config['t0_hr'])
         self.dt_min = config['dt_min']
@@ -301,10 +302,15 @@ class GymPowerVoltageEnv(gym.Env):
         p_in = action[:self.n_devices]
         v_in = action[self.n_devices:]
 
-        # return to real power and voltage based on current bounds
-        p, v = self.rescale_action(p_in, v_in)
+        if self.use_rescaled_actions:
+            # return to real power and voltage based on current bounds
+            p, v = self.rescale_action(p_in, v_in)
+        else:
+            p = p_in
+            v = v_in
 
         if self.use_constraint_projection:
+            # TODO: why do we still use the previous steps() self.u here?
             p, v, model = project_constraints(p, v, self.n_devices, self.u, self.p_min, 
                                        self.p_max, self.v_min, self.v_max, self.conductance_matrix, self.i_max_matrix)
 
