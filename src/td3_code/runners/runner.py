@@ -24,7 +24,6 @@ def parse_sample_dict(sample_dict):
     observations_extended = torch.tensor(observations_extended, dtype=torch.float32).to(DEVICE)
     actions = torch.tensor(actions, dtype=torch.float32).to(DEVICE)
     rewards = torch.tensor(rewards, dtype=torch.float32).to(DEVICE)
-    rewards = torch.tensor(rewards, dtype=torch.float32).to(DEVICE)
     dones = torch.tensor(dones, dtype=torch.float32).to(DEVICE)
     reset_mask_extended = torch.tensor(reset_mask_extended, dtype=torch.float32).to(DEVICE)
 
@@ -33,13 +32,18 @@ def parse_sample_dict(sample_dict):
 
 class Runner:
 
-    def __init__(self, env, memory, agent):
+    def __init__(self, env, memory, agent, default_episode_index):
         self.env = env
         self.memory = memory
         self.agent = agent
+        self.default_episode_index = default_episode_index
 
     def run(self, train=True, save_to_memory=True, train_bath_size=128, final=False):
-        obs = self.env.reset(train=train)
+        # Set the seed to make sure that the behavior of the EVs is the same every time when a fixed episode is ran
+        if self.default_episode_index:
+            np.random.seed(self.default_episode_index)
+            
+        obs = self.env.reset(train=train, episode_index=self.default_episode_index)
         hidden_state = self.agent.actor.get_initial_state(1)
         done = False
         reset_mask = True
@@ -54,7 +58,7 @@ class Runner:
             t = time.time()
             obs_next, reward, done, result = self.env.step(action)
             episode_results['env_time'] += time.time() - t
-            episode_results['reward'] += np.float(reward)
+            episode_results['reward'] += float(reward)
             episode_results['length'] += 1
 
             transition_dict = {'observations': obs.reshape(-1),
