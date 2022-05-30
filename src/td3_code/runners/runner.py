@@ -24,7 +24,6 @@ def parse_sample_dict(sample_dict):
     observations_extended = torch.tensor(observations_extended, dtype=torch.float32).to(DEVICE)
     actions = torch.tensor(actions, dtype=torch.float32).to(DEVICE)
     rewards = torch.tensor(rewards, dtype=torch.float32).to(DEVICE)
-    rewards = torch.tensor(rewards, dtype=torch.float32).to(DEVICE)
     dones = torch.tensor(dones, dtype=torch.float32).to(DEVICE)
     reset_mask_extended = torch.tensor(reset_mask_extended, dtype=torch.float32).to(DEVICE)
 
