@@ -39,6 +39,8 @@ class Runner:
         self.default_episode_index = default_episode_index
 
     def run(self, train=True, save_to_memory=True, train_bath_size=128, final=False):
+        if self.default_episode_index:
+            np.random.seed(self.default_episode_index)
         obs = self.env.reset(train=train, episode_index=self.default_episode_index)
         hidden_state = self.agent.actor.get_initial_state(1)
         done = False
