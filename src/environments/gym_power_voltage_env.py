@@ -149,10 +149,15 @@ class GymPowerVoltageEnv(gym.Env):
 
     def reset(self, train=True, episode_index=None):
         self.t_ind = 0
+
+        if episode_index:
+            np.random.seed(episode_index)
+
         if episode_index is None:
             self.episode_index += 1
         else:
             self.episode_index = episode_index
+
         for device in self.devices:
             if device.type == 'ev_charger':
                 device.reset()

@@ -6,6 +6,7 @@ import torch
 import copy
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DEVICE = "cpu"
 print('USING DEVICE %s' % DEVICE)
 
 
