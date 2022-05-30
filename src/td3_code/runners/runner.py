@@ -33,13 +33,14 @@ def parse_sample_dict(sample_dict):
 
 class Runner:
 
-    def __init__(self, env, memory, agent):
+    def __init__(self, env, memory, agent, default_episode_index):
         self.env = env
         self.memory = memory
         self.agent = agent
+        self.default_episode_index = default_episode_index
 
     def run(self, train=True, save_to_memory=True, train_bath_size=128, final=False):
-        obs = self.env.reset(train=train)
+        obs = self.env.reset(train=train, episode_index=self.default_episode_index)
         hidden_state = self.agent.actor.get_initial_state(1)
         done = False
         reset_mask = True
