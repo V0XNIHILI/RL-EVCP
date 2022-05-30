@@ -6,3 +6,4 @@ numpy
 gym
 torch
 wandb
+pandas

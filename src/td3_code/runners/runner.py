@@ -54,7 +54,7 @@ class Runner:
             t = time.time()
             obs_next, reward, done, result = self.env.step(action)
             episode_results['env_time'] += time.time() - t
-            episode_results['reward'] += np.float(reward)
+            episode_results['reward'] += float(reward)
             episode_results['length'] += 1
 
             transition_dict = {'observations': obs.reshape(-1),
