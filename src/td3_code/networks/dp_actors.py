@@ -5,6 +5,7 @@ import torch
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+
 class MLPActor(nn.Module):
 
     def __init__(self, observation_dim, action_dim, max_action_val, hidden_dims_list, ):
