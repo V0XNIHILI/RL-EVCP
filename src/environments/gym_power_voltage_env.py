@@ -9,6 +9,7 @@ from gym import spaces
 from src.utils.timedata import t_hr_to_t_str, create_timesteps_hr, round_t_hr, split_dates_train_and_test_monthly
 from src.environments.visualization import _make_graph
 from src.devices.device import Device
+from src.optimization.constraint_projection import project_constraints
 from collections import defaultdict
 
 class GymPowerVoltageEnv(gym.Env):
@@ -22,8 +23,8 @@ class GymPowerVoltageEnv(gym.Env):
         self._setup_devices(devices)
         self.t_ind = None
         self.episode_index = -1
-        self.conductance_matrix = conductance_matrix
-        self.i_max_matrix = i_max_matrix
+        self.conductance_matrix = conductance_matrix.astype(dtype='float32')
+        self.i_max_matrix = i_max_matrix.astype(dtype='float32')
 
         assert np.shape(conductance_matrix) == (self.n_devices, self.n_devices),\
             'Wrong shape of conductance_matrix %s' % (np.shape(conductance_matrix))
@@ -35,36 +36,56 @@ class GymPowerVoltageEnv(gym.Env):
 
         self.observation_space = spaces.Box(
             low = np.concatenate((
-                np.full(self.n_devices, -5),  # p_min -5
+                np.full(self.n_devices, 0),  # p_min -5
                 np.full(self.n_devices, 0),   # p_max 0
-                np.full(self.n_devices, 300), # v_min 300
-                np.full(self.n_devices, 400), # v_max 400
-                np.full(self.n_devices, -1),   # u     0
-            ), dtype=np.float64),
+                np.full(self.n_devices, 0), # v_min 300
+                np.full(self.n_devices, 0), # v_max 400
+                np.full(self.n_devices, 0),   # u     0
+            ), dtype=np.float32),
             high = np.concatenate((
-                np.full(self.n_devices, 0),   # p_min 0
-                np.full(self.n_devices, 10),  # p_max 10
-                np.full(self.n_devices, 300), # v_min 300
-                np.full(self.n_devices, 400), # v_max 400
-                np.full(self.n_devices, 1.5), # u     1.5
-            ), dtype=np.float64),
-            dtype=np.float64
+                np.full(self.n_devices, 1),   # p_min 0
+                np.full(self.n_devices, 1),  # p_max 10
+                np.full(self.n_devices, 1), # v_min 300
+                np.full(self.n_devices, 1), # v_max 400
+                np.full(self.n_devices, 1), # u     1.5
+            ), dtype=np.float32),
+            dtype=np.float32
         )
+
+        self.p_min_min = np.full(self.n_devices, -5)
+        self.p_min_max = np.full(self.n_devices, 0)
+        self.p_max_min = np.full(self.n_devices, 0)
+        self.p_max_max = np.full(self.n_devices, 10)
+        self.v_min_min = np.full(self.n_devices, 300)
+        self.v_min_max = np.full(self.n_devices, 300)
+        self.v_max_min = np.full(self.n_devices, 400)
+        self.v_max_max = np.full(self.n_devices, 400)
+        self.u_min = np.full(self.n_devices, -1)
+        self.u_max = np.full(self.n_devices, 1.5)
 
         self.action_space = spaces.Box(
             low = np.concatenate((
-                np.full(self.n_devices, -5),
-                np.full(self.n_devices, 300)
-            ), dtype=np.float64),
+                np.full(self.n_devices, -1),
+                np.full(self.n_devices, -1)
+            ), dtype=np.float32),
             high = np.concatenate((
-                np.full(self.n_devices, 10),
-                np.full(self.n_devices, 400)
-            ), dtype=np.float64),
-            dtype=np.float64
+                np.full(self.n_devices, 1),
+                np.full(self.n_devices, 1)
+            ), dtype=np.float32),
+            dtype=np.float32
         )
+
+        self.p_min = np.full(self.n_devices, -5)
+        self.p_max = np.full(self.n_devices, 10)
+        self.v_min = np.full(self.n_devices, 300)
+        self.v_max = np.full(self.n_devices, 400)
+        self.u = np.full(self.n_devices, 0)
 
     def _setup_config(self, config):
         self.config = config
+        self.use_constraint_projection = config['use_constraint_projection']
+        self.normalize_outputs = config['normalize_environment_outputs']
+        self.use_rescaled_actions = config['use_rescaled_actions']
         self.t0_hr = config['t0_hr']
         self.t0_str = t_hr_to_t_str(config['t0_hr'])
         self.dt_min = config['dt_min']
@@ -145,7 +166,7 @@ class GymPowerVoltageEnv(gym.Env):
 
         return self.compute_current_state()
 
-    def compute_current_state(self):
+    def compute_current_state(self, normalized=False):
         """ Computes nodal power and voltage lower and upper bounds and nodal utility coefficients
             for the current timestep. """
         p_lbs_t, p_ubs_t, v_lbs_t, v_ubs_t, u_t = [], [], [], [], []
@@ -159,8 +180,20 @@ class GymPowerVoltageEnv(gym.Env):
             v_ubs_t.append(v_max_d)
             u_t.append(u_d)
 
+        # update power bounds
+        self.p_min, self.p_max = np.array(p_lbs_t), np.array(p_ubs_t)
+
+        # update voltage bounds (should be constant?)
+        self.v_min, self.v_max = np.array(v_lbs_t), np.array(v_ubs_t)
+
+        self.u = np.array(u_t)
+
+        # normalize to [0, 1]
+        if normalized:
+            p_lbs_t, p_ubs_t, v_lbs_t, v_ubs_t, u_t = self.normalize_observation(p_lbs_t, p_ubs_t, v_lbs_t, v_ubs_t, u_t)
+
         # concatenating all arrays instead of returning a tuple of arrays
-        return np.concatenate((p_lbs_t, p_ubs_t, v_lbs_t, v_ubs_t, u_t), axis=0)
+        return np.concatenate((p_lbs_t, p_ubs_t, v_lbs_t, v_ubs_t, u_t), axis=0, dtype='float32')
 
     def compute_full_state(self, uncertainty='deterministic', n_scenarios=10, target_dt_min=None):
         """ Computes nodal power and voltage lower and upper bounds and nodal utility coefficients
@@ -264,9 +297,22 @@ class GymPowerVoltageEnv(gym.Env):
         return i_constraints_violation, power_flow_constraints_violation
 
     def step(self, action):
+        """ Received actions are in [-1, 1] """
         # give 1 array with p,v instead of 2
-        p = action[:self.n_devices]
-        v = action[self.n_devices:]
+        p_in = action[:self.n_devices]
+        v_in = action[self.n_devices:]
+
+        if self.use_rescaled_actions:
+            # return to real power and voltage based on current bounds
+            p, v = self.rescale_action(p_in, v_in)
+        else:
+            p = p_in
+            v = v_in
+
+        if self.use_constraint_projection:
+            # TODO: why do we still use the previous steps() self.u here?
+            p, v, model = project_constraints(p, v, self.n_devices, self.u, self.p_min, 
+                                       self.p_max, self.v_min, self.v_max, self.conductance_matrix, self.i_max_matrix)
 
         reward = 0
         feeders_power_price = 0
@@ -310,7 +356,44 @@ class GymPowerVoltageEnv(gym.Env):
                   'v': v }
 
         # return in gym format, result is now the info part of result
-        return self.compute_current_state(), reward, self.done, result
+        return self.compute_current_state(normalized=self.normalize_outputs), reward, self.done, result
+
+    def rescale_action(self, p, v):
+        """ [-1, 1] to real lower and upper bound """
+        new_p = p.copy()
+        new_v = v.copy()
+        new_p = (new_p + 1) / 2
+        new_v = (new_v + 1) / 2
+
+        p_diff = self.p_max - self.p_min
+        v_diff = self.v_max - self.v_min
+
+        new_p = (new_p * p_diff) + self.p_min
+        new_v = (new_v * v_diff) + self.v_min
+
+        return new_p, new_v
+
+    def normalize_observation(self, p_min, p_max, v_min, v_max, u):
+        """ Real values to [0, 1] """
+        p_min_diff = self.p_min_max - self.p_min_min
+        p_max_diff = self.p_max_max - self.p_max_min
+
+        # This is zero
+        # v_min_diff = self.v_min_max - self.v_min_min
+        # v_max_diff = self.v_max_max - self.v_max_min
+
+        u_diff = self.u_max - self.u_min
+
+        new_p_min = np.abs(self.p_min_min - p_min) / p_min_diff
+        new_p_max = np.abs(self.p_max_min - p_max) / p_max_diff
+
+        # v_min, v_max are always 300, 400 so can always go to 0, 1
+        new_v_min = np.full(self.n_devices, 0) # np.abs(v_min_min - v_min) #/ v_min_diff
+        new_v_max = np.full(self.n_devices, 1) # np.abs(v_max_min - v_max) #/ v_max_diff
+
+        new_u = np.abs(self.u_min - u) / u_diff
+
+        return new_p_min, new_p_max, new_v_min, new_v_max, new_u
 
     def compute_result(self, do_print=False):
         assert self.done, 'Compute result should only be called when env is done!'
