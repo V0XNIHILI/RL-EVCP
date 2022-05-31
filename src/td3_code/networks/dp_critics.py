@@ -5,6 +5,7 @@ import torch
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+
 class MLPCritic(nn.Module):
 
     def __init__(self, observation_dim, action_dim, hidden_dims_list):
