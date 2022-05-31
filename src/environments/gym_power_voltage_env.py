@@ -149,10 +149,15 @@ class GymPowerVoltageEnv(gym.Env):
 
     def reset(self, train=True, episode_index=None):
         self.t_ind = 0
+
+        if episode_index:
+            np.random.seed(episode_index)
+
         if episode_index is None:
             self.episode_index += 1
         else:
             self.episode_index = episode_index
+
         for device in self.devices:
             if device.type == 'ev_charger':
                 device.reset()
@@ -355,8 +360,17 @@ class GymPowerVoltageEnv(gym.Env):
                   'p': p,
                   'v': v }
 
+        training_reward = reward
+        if self.config["violations_in_reward"]:
+            # multiply by 1e-2 to get it in the range of the reward
+            training_reward -= 1e-2 * i_constraints_violation
+            training_reward -= 1e-2 * power_flow_constraints_violation
+
+        # Multiply to get in the range of -10/10
+        training_reward *= 1e-2
+
         # return in gym format, result is now the info part of result
-        return self.compute_current_state(normalized=self.normalize_outputs), reward, self.done, result
+        return self.compute_current_state(normalized=self.normalize_outputs), training_reward, self.done, result
 
     def rescale_action(self, p, v):
         """ [-1, 1] to real lower and upper bound """

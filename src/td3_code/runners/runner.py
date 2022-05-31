@@ -47,7 +47,15 @@ class Runner:
         hidden_state = self.agent.actor.get_initial_state(1)
         done = False
         reset_mask = True
-        episode_results = {'reward': 0, 'length': 0, 'env_time': 0, 'sampling_time': 0, 'training_time': 0, }
+        episode_results = {'reward': 0, 'length': 0, 'env_time': 0, 'sampling_time': 0, 'training_time': 0,
+                           'bare_reward': 0,                    # reward without optional constraint violations added
+                           'total_feeders_power_price': 0,      # total price of the feeders of the episode
+                           'total_pvs_power_price': 0,          # total pv power price during the episode
+                           'total_loads_social_welfare': 0,
+                           'total_evs_social_welfare': 0,
+                           'total_i_constraints_violation': 0,
+                           'total_power_flow_constraints_violation': 0,
+                           }
         final_results_list = []
         if save_to_memory:
             self.memory.start_episode()
@@ -60,6 +68,13 @@ class Runner:
             episode_results['env_time'] += time.time() - t
             episode_results['reward'] += float(reward)
             episode_results['length'] += 1
+            episode_results['bare_reward'] += float(result['reward'])
+            episode_results['total_feeders_power_price'] += result['feeders_power_price']
+            episode_results['total_pvs_power_price'] += result['pvs_power_price']
+            episode_results['total_loads_social_welfare'] += result['loads_social_welfare']
+            episode_results['total_evs_social_welfare'] += result['evs_social_welfare']
+            episode_results['total_i_constraints_violation'] += result['i_constraints_violation']
+            episode_results['total_power_flow_constraints_violation'] += result['power_flow_constraints_violation']
 
             transition_dict = {'observations': obs.reshape(-1),
                                'observations_next': obs_next.reshape(-1),
