@@ -6,7 +6,7 @@ import torch
 from .rescaler import rescale
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-DEVICE = "cpu"
+
 
 def parse_sample_dict(sample_dict):
     # state = sample_dict['state']
