@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-DEVICE = "cpu"
+
 
 class Actor(nn.Module):
 
