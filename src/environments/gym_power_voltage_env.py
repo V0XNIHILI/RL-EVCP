@@ -154,7 +154,10 @@ class GymPowerVoltageEnv(gym.Env):
             np.random.seed(episode_index)
 
         if episode_index is None:
-            self.episode_index += 1
+            if self.config["random_epoch_order"]:
+                self.episode_index = np.random.randint(len(list(self.device_to_dates.values())[0]['train']))
+            else:
+                self.episode_index += 1
         else:
             self.episode_index = episode_index
 
