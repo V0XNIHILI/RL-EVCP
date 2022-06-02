@@ -336,9 +336,14 @@ class GymPowerVoltageEnv(gym.Env):
         pvs_power_price = 0
         loads_social_welfare = 0
         evs_social_welfare = 0
+        total_requested_min_p = 0
+        total_requested_max_p = 0
 
         for d_ind, d in enumerate(self.devices):
             r = d.update_power_and_voltage(p[d_ind], v[d_ind])
+
+            total_requested_min_p += abs(d.p_min)
+            total_requested_max_p += (d.p_min)
 
             if d.type == 'feeder':
                 self.current_episode_statistics['feeders_price'].append(r)
@@ -374,14 +379,21 @@ class GymPowerVoltageEnv(gym.Env):
                   'total_max_i': total_max_i,
                   'total_p': total_p,
                   'total_target_p': total_target_p,
+                  'total_requested_min_p': total_requested_min_p,
+                  'total_requested_max_p': total_requested_max_p,
                   'p': p,
                   'v': v }
 
-        training_reward = reward
+        training_reward = 0
         if self.config["violations_in_reward"]:
             # multiply by 1e-2 to get it in the range of the reward
             training_reward -= 1e-2 * i_constraints_violation
             training_reward -= 1e-2 * power_flow_constraints_violation
+
+            if not self.config["one_reward_target"] or training_reward >= -1e-2:
+                training_reward += reward
+        else:
+            training_reward += reward
 
         # Multiply to get in the range of -10/10
         training_reward *= 1e-2

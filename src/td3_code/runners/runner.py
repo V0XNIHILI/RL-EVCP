@@ -59,6 +59,8 @@ class Runner:
                            'total_max_i': 0,
                            'total_power': 0,
                            'total_target_power': 0,
+                           'total_requested_min_power': 0,
+                           'total_requested_max_power': 0,
                            }
 
         final_results_list = []
@@ -84,6 +86,9 @@ class Runner:
             episode_results['total_max_i'] += result['total_max_i']
             episode_results['total_power'] += result['total_p']
             episode_results['total_target_power'] += result['total_target_p']
+
+            episode_results['total_requested_min_power'] += result['total_requested_min_p']
+            episode_results['total_requested_max_power'] += result['total_requested_max_p']
 
             transition_dict = {'observations': obs.reshape(-1),
                                'observations_next': obs_next.reshape(-1),

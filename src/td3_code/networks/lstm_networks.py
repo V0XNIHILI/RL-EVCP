@@ -2,10 +2,6 @@ import torch.nn.functional as F
 import torch.nn as nn
 import torch
 
-# make the "RNN module weights are not part of single contiguous chunk of memory" warnings shut up
-# LSTM flattening is applied on line 21, 43 and 51 so what's the problem
-# import warnings
-# warnings.filterwarnings('ignore', category=UserWarning) # make the
 
 class LSTMActor(nn.Module):
 
