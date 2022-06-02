@@ -47,6 +47,7 @@ class Runner:
         np.random.seed(seed)
 
         obs = self.env.reset(train=train, episode_index=self.default_episode_index)
+        episode_index = self.env.episode_index
         hidden_state = self.agent.actor.get_initial_state(1)
         done = False
         reset_mask = True
@@ -132,8 +133,6 @@ class Runner:
             self.env.config["one_reward_target"] = False
             random_epoch_order = self.env.config["random_epoch_order"]
             self.env.config["random_epoch_order"] = False
-            
-            episode_index = self.env.episode_index
             # greedy solution
             np.random.seed(seed)
             self.env.reset(train=train, episode_index=episode_index)

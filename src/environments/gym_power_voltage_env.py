@@ -172,7 +172,7 @@ class GymPowerVoltageEnv(gym.Env):
 
         self.current_episode_statistics = defaultdict(list)
 
-        return self.compute_current_state()
+        return self.compute_current_state(normalized=self.normalize_outputs)
 
     def compute_current_state(self, normalized=False):
         """ Computes nodal power and voltage lower and upper bounds and nodal utility coefficients
