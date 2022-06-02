@@ -149,10 +149,18 @@ class GymPowerVoltageEnv(gym.Env):
 
     def reset(self, train=True, episode_index=None):
         self.t_ind = 0
+
+        if episode_index:
+            np.random.seed(episode_index)
+
         if episode_index is None:
-            self.episode_index += 1
+            if self.config["random_epoch_order"]:
+                self.episode_index = np.random.randint(len(list(self.device_to_dates.values())[0]['train']))
+            else:
+                self.episode_index += 1
         else:
             self.episode_index = episode_index
+
         for device in self.devices:
             if device.type == 'ev_charger':
                 device.reset()
@@ -279,6 +287,10 @@ class GymPowerVoltageEnv(gym.Env):
 
     def compute_constraint_violation(self, p, v):
         i_constraints_violation = 0
+        total_i = 0
+        total_max_i = 0
+        total_p = 0
+        total_target_p = 0
 
         for d_from_ind in range(self.n_devices):
             for d_to_ind in range(d_from_ind, self.n_devices):
@@ -286,6 +298,9 @@ class GymPowerVoltageEnv(gym.Env):
                 i = (v[d_to_ind] - v[d_from_ind]) * g
                 i_max = self.i_max_matrix[d_from_ind, d_to_ind]
                 i_constraints_violation += max(0, abs(i) - abs(i_max))
+                total_i += abs(i)
+                total_max_i += abs(i_max)
+
 
         power_flow_constraints_violation = 0
 
@@ -293,8 +308,10 @@ class GymPowerVoltageEnv(gym.Env):
             p_i_target = -v[i] * sum([self.conductance_matrix[i, j] * (v[i] - v[j])
                                       for j in range(self.n_devices) if i != j]) / 1000
             power_flow_constraints_violation += max(0, abs(p_i_target - p[i]))
+            total_target_p += abs(p_i_target)
+            total_p += abs(p[i])
 
-        return i_constraints_violation, power_flow_constraints_violation
+        return i_constraints_violation, power_flow_constraints_violation, total_i, total_max_i, total_p, total_target_p
 
     def step(self, action):
         """ Received actions are in [-1, 1] """
@@ -319,9 +336,14 @@ class GymPowerVoltageEnv(gym.Env):
         pvs_power_price = 0
         loads_social_welfare = 0
         evs_social_welfare = 0
+        total_requested_min_p = 0
+        total_requested_max_p = 0
 
         for d_ind, d in enumerate(self.devices):
             r = d.update_power_and_voltage(p[d_ind], v[d_ind])
+
+            total_requested_min_p += abs(d.p_min)
+            total_requested_max_p += (d.p_min)
 
             if d.type == 'feeder':
                 self.current_episode_statistics['feeders_price'].append(r)
@@ -343,7 +365,8 @@ class GymPowerVoltageEnv(gym.Env):
         for d in self.devices:
             d.update_timestep(self.t_str)
 
-        i_constraints_violation, power_flow_constraints_violation = self.compute_constraint_violation(p, v)
+        i_constraints_violation, power_flow_constraints_violation, total_i, total_max_i, total_p, total_target_p = \
+            self.compute_constraint_violation(p, v)
 
         result = {'reward': reward,
                   'feeders_power_price': feeders_power_price,
@@ -352,11 +375,31 @@ class GymPowerVoltageEnv(gym.Env):
                   'evs_social_welfare': evs_social_welfare,
                   'i_constraints_violation': i_constraints_violation,
                   'power_flow_constraints_violation': power_flow_constraints_violation,
+                  'total_i': total_i,
+                  'total_max_i': total_max_i,
+                  'total_p': total_p,
+                  'total_target_p': total_target_p,
+                  'total_requested_min_p': total_requested_min_p,
+                  'total_requested_max_p': total_requested_max_p,
                   'p': p,
                   'v': v }
 
+        training_reward = 0
+        if self.config["violations_in_reward"]:
+            # multiply by 1e-2 to get it in the range of the reward
+            training_reward -= 1e-2 * i_constraints_violation
+            training_reward -= 1e-2 * power_flow_constraints_violation
+
+            if not self.config["one_reward_target"] or training_reward >= -1e-2:
+                training_reward += reward
+        else:
+            training_reward += reward
+
+        # Multiply to get in the range of -10/10
+        training_reward *= 1e-2
+
         # return in gym format, result is now the info part of result
-        return self.compute_current_state(normalized=self.normalize_outputs), reward, self.done, result
+        return self.compute_current_state(normalized=self.normalize_outputs), training_reward, self.done, result
 
     def rescale_action(self, p, v):
         """ [-1, 1] to real lower and upper bound """

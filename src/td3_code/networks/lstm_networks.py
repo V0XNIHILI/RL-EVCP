@@ -14,7 +14,10 @@ class LSTMActor(nn.Module):
         self.l3 = nn.Linear(hidden_dim, action_dim)
 
     def forward(self, state, h):
-        self.l1.flatten_parameters()
+        if not hasattr(self, '_flattened'):
+            self.l1.flatten_parameters()
+            setattr(self, '_flattened', True)
+
         a, h = self.l1(state, h)
         a = F.relu(self.l2(a))
         a = torch.tanh(self.l3(a))
@@ -36,7 +39,12 @@ class LSTMCritic(nn.Module):
 
     def Q1(self, state, action, h):
         sa = torch.cat([state, action], -1)
-        self.l1.flatten_parameters()
+
+        if not hasattr(self, '_flattened_q1'):
+            self.l1.flatten_parameters()
+            setattr(self, '_flattened_q1', True)
+            setattr(self, '_flattened', True)
+
         q1, h = self.l1(sa, h)
         q1 = F.relu(self.l2(q1))
         q1 = self.l3(q1)
@@ -44,7 +52,12 @@ class LSTMCritic(nn.Module):
 
     def Q2(self, state, action, h):
         sa = torch.cat([state, action], -1)
-        self.l4.flatten_parameters()
+
+        if not hasattr(self, '_flattened_q2'):
+            self.l4.flatten_parameters()
+            setattr(self, '_flattened_q2', True)
+            setattr(self, '_flattened', True)
+
         q2, h = self.l4(sa, h)
         q2 = F.relu(self.l5(q2))
         q2 = self.l6(q2)
