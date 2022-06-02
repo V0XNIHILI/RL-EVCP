@@ -41,9 +41,12 @@ def project_constraints(p, v, n_devices, u_t, p_lbs_t, p_ubs_t, v_lbs_t, v_ubs_t
         solver = SolverFactory('glpk')
     else:
         solver = SolverFactory('ipopt')
-    solver.solve(model, tee=tee)
-    new_p = dict_to_matrix(model.p, model.devices.data()) / 1000
-    new_v = dict_to_matrix(model.v, model.devices.data())
+    try:
+        solver.solve(model, tee=tee)
+        new_p = dict_to_matrix(model.p, model.devices.data()) / 1000
+        new_v = dict_to_matrix(model.v, model.devices.data())
+    except ValueError:
+        return p, v, None
     return new_p, new_v, model
 
 
