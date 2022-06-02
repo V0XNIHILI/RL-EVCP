@@ -396,7 +396,8 @@ class GymPowerVoltageEnv(gym.Env):
             training_reward += reward
 
         # Multiply to get in the range of -10/10
-        training_reward *= 1e-2
+        # TOOD(Frans): Add to config
+        # training_reward *= 1e-2
 
         # return in gym format, result is now the info part of result
         return self.compute_current_state(normalized=self.normalize_outputs), training_reward, self.done, result
