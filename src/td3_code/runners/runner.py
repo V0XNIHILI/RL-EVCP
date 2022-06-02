@@ -55,7 +55,12 @@ class Runner:
                            'total_evs_social_welfare': 0,
                            'total_i_constraints_violation': 0,
                            'total_power_flow_constraints_violation': 0,
+                           'total_i': 0,
+                           'total_max_i': 0,
+                           'total_power': 0,
+                           'total_target_power': 0,
                            }
+
         final_results_list = []
         if save_to_memory:
             self.memory.start_episode()
@@ -75,6 +80,10 @@ class Runner:
             episode_results['total_evs_social_welfare'] += result['evs_social_welfare']
             episode_results['total_i_constraints_violation'] += result['i_constraints_violation']
             episode_results['total_power_flow_constraints_violation'] += result['power_flow_constraints_violation']
+            episode_results['total_i'] += result['total_i']
+            episode_results['total_max_i'] += result['total_max_i']
+            episode_results['total_power'] += result['total_p']
+            episode_results['total_target_power'] += result['total_target_p']
 
             transition_dict = {'observations': obs.reshape(-1),
                                'observations_next': obs_next.reshape(-1),
