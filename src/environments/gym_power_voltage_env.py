@@ -343,7 +343,7 @@ class GymPowerVoltageEnv(gym.Env):
             r = d.update_power_and_voltage(p[d_ind], v[d_ind])
 
             total_requested_min_p += abs(d.p_min)
-            total_requested_max_p += (d.p_min)
+            total_requested_max_p += abs(d.p_max)
 
             if d.type == 'feeder':
                 self.current_episode_statistics['feeders_price'].append(r)
