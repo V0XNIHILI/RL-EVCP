@@ -32,9 +32,10 @@ def project_constraints(p, v, n_devices, u_t, p_lbs_t, p_ubs_t, v_lbs_t, v_ubs_t
     model.distance_to_solution = []
     for (p_val, v_val, d_ind) in zip(p, v, model.devices):
         p_distance = distance(p_val, model.p[d_ind])
-        v_distance = distance(v_val, model.v[d_ind])
+        #NOTE(Frans): Voltage has no influence on our actual reward so don't put it in the objective
+        # v_distance = distance(v_val, model.v[d_ind])
         model.distance_to_solution.append(p_distance)
-        model.distance_to_solution.append(v_distance)
+        # model.distance_to_solution.append(v_distance)
     model.f = Objective(sense=minimize, expr=sum(model.distance_to_solution))
 
     if lossless:

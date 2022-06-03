@@ -327,6 +327,7 @@ class GymPowerVoltageEnv(gym.Env):
             v = v_in
 
         if self.use_constraint_projection:
+            self.compute_current_state()
             # TODO: why do we still use the previous steps() self.u here?
             p, v, model = project_constraints(p, v, self.n_devices, self.u, self.p_min, 
                                        self.p_max, self.v_min, self.v_max, self.conductance_matrix, self.i_max_matrix)
