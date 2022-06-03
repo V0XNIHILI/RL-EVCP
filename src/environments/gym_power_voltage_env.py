@@ -150,8 +150,8 @@ class GymPowerVoltageEnv(gym.Env):
     def reset(self, train=True, episode_index=None):
         self.t_ind = 0
 
-        if episode_index:
-            np.random.seed(episode_index)
+        # if episode_index:
+        #     np.random.seed(episode_index)
 
         if episode_index is None:
             if self.config["random_epoch_order"]:
@@ -394,10 +394,6 @@ class GymPowerVoltageEnv(gym.Env):
                 training_reward += reward
         else:
             training_reward += reward
-
-        # Multiply to get in the range of -10/10
-        # TOOD(Frans): Add to config
-        # training_reward *= 1e-2
 
         # return in gym format, result is now the info part of result
         return self.compute_current_state(normalized=self.normalize_outputs), training_reward, self.done, result

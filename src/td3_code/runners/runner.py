@@ -46,7 +46,7 @@ class Runner:
         seed = self.default_episode_index if self.default_episode_index else np.random.randint(1_000_1000)
         np.random.seed(seed)
 
-        obs = self.env.reset(train=train, episode_index=self.default_episode_index)
+        obs = self.env.reset(train=True, episode_index=self.default_episode_index)
         episode_index = self.env.episode_index
         hidden_state = self.agent.actor.get_initial_state(1)
         done = False
@@ -70,10 +70,12 @@ class Runner:
         final_results_list = []
         if save_to_memory:
             self.memory.start_episode()
+        action_history = []
         while not done:
             action, hidden_state = self.agent.select_action(torch.tensor(obs).reshape((1, 1, -1)).to(DEVICE),
                                                             hidden_state, noisy=train, use_target=False)
             action = action.cpu().detach().numpy().reshape(-1)
+            action_history.append(action)
             t = time.time()
             obs_next, reward, done, result = self.env.step(action)
             episode_results['env_time'] += time.time() - t
@@ -135,7 +137,7 @@ class Runner:
             self.env.config["random_epoch_order"] = False
             # greedy solution
             np.random.seed(seed)
-            self.env.reset(train=train, episode_index=episode_index)
+            self.env.reset(train=True, episode_index=episode_index)
 
             total_greedy_reward = 0
             while not self.env.done:
@@ -153,7 +155,7 @@ class Runner:
             episode_results['greedy_reward'] = total_greedy_reward
             # deterministic solution
             np.random.seed(seed)
-            self.env.reset(train=train, episode_index=episode_index)
+            self.env.reset(train=True, episode_index=episode_index)
 
             p_lbs, p_ubs, v_lbs, v_ubs, u, evs_dict = self.env.compute_full_state()
             p_det, v_det, model = compute_deterministic_solution(self.env.dt_min, evs_dict, u[0], p_lbs[0], 
@@ -170,7 +172,7 @@ class Runner:
             episode_results['deterministic_reward'] = total_deterministic_reward
             # maximum solution
             np.random.seed(seed)
-            self.env.reset(train=train, episode_index=episode_index)
+            self.env.reset(train=True, episode_index=episode_index)
             total_max_reward = 0
             while not self.env.done:
                 state = self.env.compute_current_state()
@@ -188,6 +190,12 @@ class Runner:
             self.env.config["random_epoch_order"] = random_epoch_order
             self.env.config["violations_in_reward"] = violations_in_reward
 
+            if episode_results['reward'] >= episode_results['max_reward']:
+                print('-=-=-=-=-=-=-=-=-=-')
+                print(episode_results['reward'], episode_results['max_reward'])
+                print(episode_index, seed)
+                print(action_history)
+                print('-=-=-=-=-=-=-=-=-=-')
         if final:
             return episode_results, final_results_list
         else:
