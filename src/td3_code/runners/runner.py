@@ -57,10 +57,12 @@ class Runner:
                            'total_power_flow_constraints_violation': 0,
                            'total_i': 0,
                            'total_max_i': 0,
+                           'max_i': 0,
                            'total_power': 0,
                            'total_target_power': 0,
                            'total_requested_min_power': 0,
                            'total_requested_max_power': 0,
+                           'agent_policy_noise': 0
                            }
 
         final_results_list = []
@@ -86,6 +88,10 @@ class Runner:
             episode_results['total_max_i'] += result['total_max_i']
             episode_results['total_power'] += result['total_p']
             episode_results['total_target_power'] += result['total_target_p']
+
+            if episode_results['max_i'] < result['max_i']:
+                episode_results['max_i'] = result['max_i']
+
 
             episode_results['total_requested_min_power'] += result['total_requested_min_p']
             episode_results['total_requested_max_power'] += result['total_requested_max_p']
@@ -114,6 +120,9 @@ class Runner:
                 final_results_list.append(result)
             obs = obs_next
             reset_mask = bool(done)
+
+        # log the final policy noise
+        episode_results['agent_policy_noise'] = self.agent.policy_noise
 
         if final:
             return episode_results, final_results_list
