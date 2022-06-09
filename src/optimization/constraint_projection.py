@@ -52,8 +52,10 @@ def project_constraints(p, v, n_devices, u_t, p_lbs_t, p_ubs_t, v_lbs_t, v_ubs_t
 
 
 def project_constraints_ev(p_EV, EV_devices, u_t, p_lbs_t, p_ubs_t, v_lbs_t, v_ubs_t, conductance_matrix, i_max_matrix,
-                             lossless=False, tee=False):
-    p_lbs_t, p_ubs_t = p_lbs_t * 1000, p_ubs_t * 1000  # Transform powers to W from  kW
+                             lossless=False, tee=False, iterations=100):
+
+    p_EV, p_lbs_t, p_ubs_t = p_EV * 1000, p_lbs_t * 1000, p_ubs_t * 1000  # Transform powers to W from  kW
+
     model = ConcreteModel()
     model.devices = Set(initialize=range(u_t.shape[0]))
     model.p = Var(model.devices)
@@ -70,7 +72,7 @@ def project_constraints_ev(p_EV, EV_devices, u_t, p_lbs_t, p_ubs_t, v_lbs_t, v_u
     model.power_balance = ConstraintList()
     for i in model.devices:
         v_i = model.v[i] if not lossless else v_ubs_t[0]
-        p_i = -v_i * sum([conductance_matrix[i, j] * (model.v[i] -  model.v[j]) for j in model.devices if i != j])
+        p_i = -v_i * sum([conductance_matrix[i, j] * (model.v[i] - model.v[j]) for j in model.devices if i != j])
         model.power_balance.add(model.p[i] == p_i)
 
     # Line currents
@@ -86,11 +88,9 @@ def project_constraints_ev(p_EV, EV_devices, u_t, p_lbs_t, p_ubs_t, v_lbs_t, v_u
     model.distance_to_solution = []
     for (p_val, d_ind) in zip(p_EV, EV_devices):
         p_distance = distance(p_val, model.p[d_ind])
-        #NOTE(Frans): Voltage has no influence on our actual reward so don't put it in the objective
-        # v_distance = distance(v_val, model.v[d_ind])
         model.distance_to_solution.append(p_distance)
 
-    # Objective for all other devices
+    # Objective for all other non EV devices
     model.per_device_utility = []
     for d_ind in model.devices:
         if d_ind not in EV_devices:
@@ -98,15 +98,17 @@ def project_constraints_ev(p_EV, EV_devices, u_t, p_lbs_t, p_ubs_t, v_lbs_t, v_u
             model.per_device_utility.append(val)
 
     # model.distance_to_solution.append(v_distance)
-    model.f = Objective(sense=maximize, expr=sum(model.per_device_utility) - sum(model.distance_to_solution))
+    model.f = Objective(sense=maximize, expr=-sum(model.distance_to_solution) + sum(model.per_device_utility))
 
     if lossless:
-        solver = SolverFactory('glpk')
+        solver = SolverFactory('glpk') #, executable='E:\\Boeken\\Jaar 5\\Q4 Project\\winglpk-4.55\\glpk-4.55\\w64\\glpsol')
     else:
-        solver = SolverFactory('ipopt')
+        solver = SolverFactory('ipopt') #, executable='E:\\Boeken\\Jaar 5\\Q4 Project\\Ipopt-3.11.1-win64-intel13.1\\Ipopt-3.11.1-win64-intel13.1\\bin\\ipopt')
+        solver.options['max_iter'] = iterations  # number of iterations you wish
 
     solver.solve(model, tee=tee)
-    new_p = dict_to_matrix(model.p, model.devices.data()) / 1000
+
+    new_p = dict_to_matrix(model.p, model.devices.data()) / 1000 # convert from w to kw
     new_v = dict_to_matrix(model.v, model.devices.data())
 
     return new_p, new_v, model

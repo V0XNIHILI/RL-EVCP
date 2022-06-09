@@ -330,6 +330,8 @@ class GymPowerVoltageEnv(gym.Env):
         """ Received actions are in [-1, 1] """
 
         if self.config["EV_only"]:
+            self.compute_current_state()
+
             if self.use_rescaled_actions:
                 # return to real power and voltage based on current bounds
                 p_ev = self.rescale_action_p(action)
@@ -338,7 +340,8 @@ class GymPowerVoltageEnv(gym.Env):
 
             p, v, model = project_constraints_ev(p_ev, self.ev_charger_inds, self.u, self.p_min,
                                               self.p_max, self.v_min, self.v_max, self.conductance_matrix,
-                                              self.i_max_matrix)
+                                              self.i_max_matrix, lossless=self.config["lossless_solver"],
+                                              iterations=self.config["solver_iterations"])
         else:
             # give 1 array with p,v instead of 2
             p_in = action[:self.n_devices]
