@@ -13,7 +13,7 @@ class TD3Agent(object):
 
     def __init__(self, observation_dim, action_dim, max_action_val, lstm_dims_list, hidden_dims_list,
                  actor_lr=3e-4, critic_lr=3e-4,  discount=0.99, tau=0.005,
-                 policy_noise=0.2, noise_clip=0.5, policy_update_freq=2):
+                 policy_noise=0.2, min_policy_noise=0.02, noise_clip=0.5, noise_decay=0.9995, policy_update_freq=2):
         self.on_policy = False
         self._create_networks(observation_dim, action_dim, max_action_val, lstm_dims_list,
                               hidden_dims_list, actor_lr, critic_lr)
@@ -23,7 +23,9 @@ class TD3Agent(object):
         self.discount = discount
         self.tau = tau
         self.policy_noise = policy_noise
+        self.min_policy_noise = min_policy_noise
         self.noise_clip = noise_clip
+        self.noise_decay = noise_decay
         self.policy_update_freq = policy_update_freq
 
     def _create_networks(self, observation_dim, action_dim, max_action_val,
@@ -77,6 +79,10 @@ class TD3Agent(object):
         # 'extended' variables are one timestep longer
         initial_hidden_state = self.actor.get_initial_state(observations_extended.shape[0])
         assert len(observations_extended.shape) == 3, 'Train must receive 3 dimensional data (batch, time, vshape)'
+        # Reduce the noise scale with noise decay
+        if self.policy_noise > self.min_policy_noise:
+            self.policy_noise = self.policy_noise * self.noise_decay
+            self.noise_clip = self.noise_clip * self.noise_decay
         # Compute target q values for the observations
         with torch.no_grad():
             target_actions_extended, _ = self.select_action(observations_extended, initial_hidden_state,

@@ -9,8 +9,10 @@ from gym import spaces
 from src.utils.timedata import t_hr_to_t_str, create_timesteps_hr, round_t_hr, split_dates_train_and_test_monthly
 from src.environments.visualization import _make_graph
 from src.devices.device import Device
-from src.optimization.constraint_projection import project_constraints
+from src.optimization.constraint_projection import project_constraints, project_constraints_ev
 from collections import defaultdict
+
+import torch as th
 
 class GymPowerVoltageEnv(gym.Env):
     def __init__(self,
@@ -63,17 +65,24 @@ class GymPowerVoltageEnv(gym.Env):
         self.u_min = np.full(self.n_devices, -1)
         self.u_max = np.full(self.n_devices, 1.5)
 
-        self.action_space = spaces.Box(
-            low = np.concatenate((
-                np.full(self.n_devices, -1),
-                np.full(self.n_devices, -1)
-            ), dtype=np.float32),
-            high = np.concatenate((
-                np.full(self.n_devices, 1),
-                np.full(self.n_devices, 1)
-            ), dtype=np.float32),
-            dtype=np.float32
-        )
+        if self.config["EV_only"]:
+            self.action_space = spaces.Box(
+                low=np.full(self.n_ev_chargers, -1, dtype=np.float32),
+                high=np.full(self.n_ev_chargers, 1, dtype=np.float32),
+                dtype=np.float32
+            )
+        else:
+            self.action_space = spaces.Box(
+                low = np.concatenate((
+                    np.full(self.n_devices, -1),
+                    np.full(self.n_devices, -1)
+                ), dtype=np.float32),
+                high = np.concatenate((
+                    np.full(self.n_devices, 1),
+                    np.full(self.n_devices, 1)
+                ), dtype=np.float32),
+                dtype=np.float32
+            )
 
         self.p_min = np.full(self.n_devices, -5)
         self.p_max = np.full(self.n_devices, 10)
@@ -291,6 +300,7 @@ class GymPowerVoltageEnv(gym.Env):
         total_max_i = 0
         total_p = 0
         total_target_p = 0
+        max_i = 0
 
         for d_from_ind in range(self.n_devices):
             for d_to_ind in range(d_from_ind, self.n_devices):
@@ -300,6 +310,9 @@ class GymPowerVoltageEnv(gym.Env):
                 i_constraints_violation += max(0, abs(i) - abs(i_max))
                 total_i += abs(i)
                 total_max_i += abs(i_max)
+
+                if max_i < max(0, abs(i) - abs(i_max)):
+                    max_i = max(0, abs(i) - abs(i_max))
 
 
         power_flow_constraints_violation = 0
@@ -311,26 +324,38 @@ class GymPowerVoltageEnv(gym.Env):
             total_target_p += abs(p_i_target)
             total_p += abs(p[i])
 
-        return i_constraints_violation, power_flow_constraints_violation, total_i, total_max_i, total_p, total_target_p
+        return i_constraints_violation, power_flow_constraints_violation, total_i, total_max_i, max_i, total_p, total_target_p
 
     def step(self, action):
         """ Received actions are in [-1, 1] """
-        # give 1 array with p,v instead of 2
-        p_in = action[:self.n_devices]
-        v_in = action[self.n_devices:]
 
-        if self.use_rescaled_actions:
-            # return to real power and voltage based on current bounds
-            p, v = self.rescale_action(p_in, v_in)
+        if self.config["EV_only"]:
+            if self.use_rescaled_actions:
+                # return to real power and voltage based on current bounds
+                p_ev = self.rescale_action_p(action)
+            else:
+                p_ev = action
+
+            p, v, model = project_constraints_ev(p_ev, self.ev_charger_inds, self.u, self.p_min,
+                                              self.p_max, self.v_min, self.v_max, self.conductance_matrix,
+                                              self.i_max_matrix)
         else:
-            p = p_in
-            v = v_in
+            # give 1 array with p,v instead of 2
+            p_in = action[:self.n_devices]
+            v_in = action[self.n_devices:]
 
-        if self.use_constraint_projection:
-            self.compute_current_state()
-            # TODO: why do we still use the previous steps() self.u here?
-            p, v, model = project_constraints(p, v, self.n_devices, self.u, self.p_min, 
-                                       self.p_max, self.v_min, self.v_max, self.conductance_matrix, self.i_max_matrix)
+            if self.use_rescaled_actions:
+                # return to real power and voltage based on current bounds
+                p, v = self.rescale_action(p_in, v_in)
+            else:
+                p = p_in
+                v = v_in
+
+            if self.use_constraint_projection:
+                self.compute_current_state()
+                # TODO: why do we still use the previous steps() self.u here?
+                p, v, model = project_constraints(p, v, self.n_devices, self.u, self.p_min,
+                                           self.p_max, self.v_min, self.v_max, self.conductance_matrix, self.i_max_matrix)
 
         reward = 0
         feeders_power_price = 0
@@ -344,7 +369,7 @@ class GymPowerVoltageEnv(gym.Env):
             r = d.update_power_and_voltage(p[d_ind], v[d_ind])
 
             total_requested_min_p += abs(d.p_min)
-            total_requested_max_p += (d.p_min)
+            total_requested_max_p += abs(d.p_max)
 
             if d.type == 'feeder':
                 self.current_episode_statistics['feeders_price'].append(r)
@@ -366,7 +391,7 @@ class GymPowerVoltageEnv(gym.Env):
         for d in self.devices:
             d.update_timestep(self.t_str)
 
-        i_constraints_violation, power_flow_constraints_violation, total_i, total_max_i, total_p, total_target_p = \
+        i_constraints_violation, power_flow_constraints_violation, total_i, total_max_i, max_i, total_p, total_target_p = \
             self.compute_constraint_violation(p, v)
 
         result = {'reward': reward,
@@ -378,6 +403,7 @@ class GymPowerVoltageEnv(gym.Env):
                   'power_flow_constraints_violation': power_flow_constraints_violation,
                   'total_i': total_i,
                   'total_max_i': total_max_i,
+                  'max_i': max_i,
                   'total_p': total_p,
                   'total_target_p': total_target_p,
                   'total_requested_min_p': total_requested_min_p,
@@ -388,13 +414,24 @@ class GymPowerVoltageEnv(gym.Env):
         training_reward = 0
         if self.config["violations_in_reward"]:
             # multiply by 1e-2 to get it in the range of the reward
-            training_reward -= 1e-2 * i_constraints_violation
-            training_reward -= 1e-2 * power_flow_constraints_violation
+            training_reward -= self.config["current_reward_factor"] * i_constraints_violation
+            training_reward -= self.config["power_reward_factor"] * power_flow_constraints_violation
+            training_reward -= self.config["max_current_reward_factor"] * max_i
 
             if not self.config["one_reward_target"] or training_reward >= -1e-2:
-                training_reward += reward
+                training_reward += self.config["utility_reward_factor"] * reward
         else:
-            training_reward += reward
+            training_reward += self.config["utility_reward_factor"] * reward
+
+        if training_reward > 0:
+            print(f'training_reward: {training_reward}')
+            print(f'current component: {-self.config["current_reward_factor"] * i_constraints_violation}')
+            print(f'power component: {-self.config["power_reward_factor"] * power_flow_constraints_violation}')
+            print(f'utility component: {self.config["utility_reward_factor"] * reward}')
+            print('voltages')
+            print(v)
+            print('power')
+            print(p)
 
         # return in gym format, result is now the info part of result
         return self.compute_current_state(normalized=self.normalize_outputs), training_reward, self.done, result
@@ -413,6 +450,16 @@ class GymPowerVoltageEnv(gym.Env):
         new_v = (new_v * v_diff) + self.v_min
 
         return new_p, new_v
+
+    def rescale_action_p(self, p):
+        """ [-1, 1] to real lower and upper bound for ev charger power"""
+        new_p = p.copy()
+        new_p = (new_p + 1) / 2
+
+        p_diff = self.p_max[self.ev_charger_inds] - self.p_min[self.ev_charger_inds]
+        new_p = (new_p * p_diff) + self.p_min[self.ev_charger_inds]
+
+        return new_p
 
     def normalize_observation(self, p_min, p_max, v_min, v_max, u):
         """ Real values to [0, 1] """

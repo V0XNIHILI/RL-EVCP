@@ -61,10 +61,12 @@ class Runner:
                            'total_power_flow_constraints_violation': 0,
                            'total_i': 0,
                            'total_max_i': 0,
+                           'max_i': 0,
                            'total_power': 0,
                            'total_target_power': 0,
                            'total_requested_min_power': 0,
                            'total_requested_max_power': 0,
+                           'agent_policy_noise': 0
                            }
 
         final_results_list = []
@@ -92,7 +94,8 @@ class Runner:
             episode_results['total_max_i'] += result['total_max_i']
             episode_results['total_power'] += result['total_p']
             episode_results['total_target_power'] += result['total_target_p']
-
+            if episode_results['max_i'] < result['max_i']:
+                episode_results['max_i'] = result['max_i']
             episode_results['total_requested_min_power'] += result['total_requested_min_p']
             episode_results['total_requested_max_power'] += result['total_requested_max_p']
 
@@ -121,6 +124,9 @@ class Runner:
             obs = obs_next
             reset_mask = bool(done)
 
+        # log the final policy noise
+        episode_results['agent_policy_noise'] = self.agent.policy_noise
+
         if not train:
             # store variables
             use_rescaled_actions = self.env.use_rescaled_actions
@@ -146,8 +152,8 @@ class Runner:
                 state = self.env.compute_current_state()
                 reshaped_state = state.reshape(-1, self.env.n_devices)
                 p_lbs_t, p_ubs_t, v_lbs_t, v_ubs_t, u_t = reshaped_state[0], reshaped_state[1], reshaped_state[2], reshaped_state[3], reshaped_state[4]
-                p, v, model = compute_greedy_heuristic(u_t, p_lbs_t, p_ubs_t, v_lbs_t, v_ubs_t, 
-                                                    self.env.conductance_matrix, self.env.i_max_matrix, 
+                p, v, model = compute_greedy_heuristic(u_t, p_lbs_t, p_ubs_t, v_lbs_t, v_ubs_t,
+                                                    self.env.conductance_matrix, self.env.i_max_matrix,
                                                     lossless=True, tee=False)
                 action = np.concatenate((p,v), axis=0)
                 _, _, _, result = self.env.step(action)
@@ -158,10 +164,10 @@ class Runner:
             self.env.reset(train=train, episode_index=episode_index)
 
             p_lbs, p_ubs, v_lbs, v_ubs, u, evs_dict = self.env.compute_full_state()
-            p_det, v_det, model = compute_deterministic_solution(self.env.dt_min, evs_dict, u[0], p_lbs[0], 
-                                                                p_ubs[0], v_lbs[0], v_ubs[0], 
+            p_det, v_det, model = compute_deterministic_solution(self.env.dt_min, evs_dict, u[0], p_lbs[0],
+                                                                p_ubs[0], v_lbs[0], v_ubs[0],
                                                                 self.env.conductance_matrix, self.env.i_max_matrix,
-                                                                lossless=False, tee=False)                       
+                                                                lossless=False, tee=False)
             total_deterministic_reward = 0
             while not self.env.done:
                 action = np.concatenate((p_det[self.env.t_ind], v_det[self.env.t_ind]), axis=0)
