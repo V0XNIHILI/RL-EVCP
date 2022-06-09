@@ -10,7 +10,9 @@ from src.samplers.ev_session_sampler import EVSessionSampler
 
 
 def load_samplers(config):
-    config_hash = hash(repr(sorted(config.items())))
+    print(config)
+    print(repr(sorted(config.items())))
+    config_hash = str(repr(sorted(config.items())))
 
     # Read config
     t0_hr = config['t0_hr']
@@ -29,6 +31,9 @@ def load_samplers(config):
     if exists(path_to_data + '/cache_config_hash.pickle'):
         with open(path_to_data + '/cache_config_hash.pickle', 'rb') as f:
             cache_hash = pickle.load(f)
+
+        print(f'config hash: {config_hash}')
+        print(f'cache hash: {cache_hash}')
 
         # Assume there is cache if there is a cache config hash and they match
         if cache_hash == config_hash:
