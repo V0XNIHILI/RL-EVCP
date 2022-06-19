@@ -2,6 +2,7 @@ import time
 
 import numpy as np
 import torch
+import wandb
 
 from .rescaler import rescale
 
@@ -35,7 +36,7 @@ def parse_sample_dict(sample_dict):
 
 class Runner:
 
-    def __init__(self, env, memory, agent, default_episode_index):
+    def __init__(self, env, memory, agent, default_episode_index, ):
         self.env = env
         self.memory = memory
         self.agent = agent
@@ -126,6 +127,9 @@ class Runner:
 
         # log the final policy noise
         episode_results['agent_policy_noise'] = self.agent.policy_noise
+        episode_results['action_mean'] = np.mean(action_history)
+        episode_results['action_min'] = np.min(action_history)
+        episode_results['action_max'] = np.max(action_history)
 
         if not train:
             # store variables
