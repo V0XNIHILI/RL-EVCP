@@ -383,7 +383,7 @@ class GymPowerVoltageEnv(gym.Env):
                 self.compute_current_state()
                 # TODO: why do we still use the previous steps() self.u here?
                 p, v, model = project_constraints(p, v, self.n_devices, self.u, self.p_min,
-                                           self.p_max, self.v_min, self.v_max, self.conductance_matrix, self.i_max_matrix)
+                                           self.p_max, self.v_min, self.v_max, self.conductance_matrix, self.i_max_matrix, iterations=self.config["solver_iterations"])
 
         reward = 0
         feeders_power_price = 0
