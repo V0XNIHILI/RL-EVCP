@@ -31,12 +31,12 @@ def project_constraints(p, v, n_devices, u_t, p_lbs_t, p_ubs_t, v_lbs_t, v_ubs_t
     # Constraint Projection Objective
     model.distance_to_solution = []
     for (p_val, v_val, d_ind) in zip(p, v, model.devices):
-        p_distance = distance(p_val, model.p[d_ind])
+        p_distance = (p_val - model.p[d_ind])**2
         #NOTE(Frans): Voltage has no influence on our actual reward so don't put it in the objective
         # v_distance = distance(v_val, model.v[d_ind])
         model.distance_to_solution.append(p_distance)
         # model.distance_to_solution.append(v_distance)
-    model.f = Objective(sense=minimize, expr=sum(model.distance_to_solution))
+    model.f = Objective(sense=minimize, expr=sum(sqrt(model.distance_to_solution)))
 
     if lossless:
         solver = SolverFactory('glpk')
@@ -87,7 +87,7 @@ def project_constraints_ev(p_EV, EV_devices, u_t, p_lbs_t, p_ubs_t, v_lbs_t, v_u
     # Constraint Projection EV power target
     model.distance_to_solution = []
     for (p_val, d_ind) in zip(p_EV, EV_devices):
-        p_distance = distance(p_val, model.p[d_ind])
+        p_distance = (p_val - model.p[d_ind])**2
         model.distance_to_solution.append(p_distance)
 
     # Objective for all other non EV devices
@@ -98,7 +98,7 @@ def project_constraints_ev(p_EV, EV_devices, u_t, p_lbs_t, p_ubs_t, v_lbs_t, v_u
             model.per_device_utility.append(val)
 
     # model.distance_to_solution.append(v_distance)
-    model.f = Objective(sense=maximize, expr=-sum(model.distance_to_solution) + sum(model.per_device_utility))
+    model.f = Objective(sense=maximize, expr=-sum(sqrt(model.distance_to_solution)) + sum(model.per_device_utility))
 
     if lossless:
         solver = SolverFactory('glpk') #, executable='E:\\Boeken\\Jaar 5\\Q4 Project\\winglpk-4.55\\glpk-4.55\\w64\\glpsol')
