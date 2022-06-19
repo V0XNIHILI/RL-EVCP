@@ -333,34 +333,51 @@ class GymPowerVoltageEnv(gym.Env):
         if self.config["EV_only"] and not full_state:
             self.compute_current_state()
 
-            if self.use_rescaled_actions:
-                # return to real power and voltage based on current bounds
-                p_ev = self.rescale_action_p(action)
-            else:
-                p_ev = action
+            # if self.use_rescaled_actions:
+            #     return to real power and voltage based on current bounds
+            p_ev = self.rescale_action_p(action)
+            # else:
+            #     p_ev = action
 
             if self.config["predicting_bounds"]:
-                for new_max_power, d_ind in zip(p_ev, self.ev_charger_inds):
-                    self.p_max[d_ind] = new_max_power
+                # Set the new top power limit for evs to the model predictions
+                new_p_max = self.p_max.copy()
+                for new_max_power_ev, d_ind in zip(p_ev, self.ev_charger_inds):
+                    new_p_max[d_ind] = new_max_power_ev
 
-                p, v, model = compute_greedy_heuristic(self.u, self.p_min, self.p_max, self.v_min, self.v_max,
-                                                       self.conductance_matrix, self.i_max_matrix,
-                                                       lossless=self.config["lossless_solver"], tee=False)
+                # hack to catch failing runs
+                no_result = True
+                second_try = False
+                while no_result:
+                    try:
+                        p_m = self.p_max if second_try else new_p_max
+                        p, v, model = compute_greedy_heuristic(self.u, self.p_min, p_m, self.v_min, self.v_max,
+                                                               self.conductance_matrix, self.i_max_matrix,
+                                                               lossless=self.config["lossless_solver"], tee=False)
+                        if(np.isnan(p[0])):
+                            raise ValueError("Got nan")
 
-                if np.isnan(p[0]):
-                    print("got nan")
-                    print("actions before scaling:")
-                    print(action)
-                    print("p_max before ev bounds:")
-                    print(self.p_max)
-                    print("actions after scaling:")
-                    print(p_ev)
-                    print("ev pmax:")
-                    print(self.p_max[self.ev_charger_inds])
-                    print("ev pmin:")
-                    print(self.p_min[self.ev_charger_inds])
-                    print("p_max after ev bounds:")
-                    print(self.p_max)
+                        no_result = False
+                    except Exception as e:
+                        print(e)
+                        print("actions before scaling:")
+                        print(action)
+                        print(f'Rescale actions is {self.use_rescaled_actions}')
+                        print("p_max before ev bounds:")
+                        print(self.p_max)
+                        print("actions after scaling:")
+                        print(p_ev)
+                        print("ev pmax:")
+                        print(self.p_max[self.ev_charger_inds])
+                        print("ev pmin:")
+                        print(self.p_min[self.ev_charger_inds])
+                        print("p_max after ev bounds:")
+                        print(self.p_max)
+
+                        if second_try:
+                            raise ValueError("Failed twice")
+
+                    second_try = True
 
             else:
                 p, v, model = project_constraints_ev(p_ev, self.ev_charger_inds, self.u, self.p_min,
