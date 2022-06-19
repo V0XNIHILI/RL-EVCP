@@ -36,7 +36,7 @@ def project_constraints(p, v, n_devices, u_t, p_lbs_t, p_ubs_t, v_lbs_t, v_ubs_t
         # v_distance = distance(v_val, model.v[d_ind])
         model.distance_to_solution.append(p_distance)
         # model.distance_to_solution.append(v_distance)
-    model.f = Objective(sense=minimize, expr=sum(sqrt(model.distance_to_solution)))
+    model.f = Objective(sense=minimize, expr=sqrt(sum(model.distance_to_solution)))
 
     if lossless:
         solver = SolverFactory('glpk')
@@ -99,7 +99,7 @@ def project_constraints_ev(p_EV, EV_devices, u_t, p_lbs_t, p_ubs_t, v_lbs_t, v_u
             model.per_device_utility.append(val)
 
     # model.distance_to_solution.append(v_distance)
-    model.f = Objective(sense=maximize, expr=-sum(sqrt(model.distance_to_solution)) + sum(model.per_device_utility))
+    model.f = Objective(sense=maximize, expr=-sqrt(sum(model.distance_to_solution)) + sum(model.per_device_utility))
 
     if lossless:
         solver = SolverFactory('glpk') #, executable='E:\\Boeken\\Jaar 5\\Q4 Project\\winglpk-4.55\\glpk-4.55\\w64\\glpsol')
@@ -115,9 +115,9 @@ def project_constraints_ev(p_EV, EV_devices, u_t, p_lbs_t, p_ubs_t, v_lbs_t, v_u
     return new_p, new_v, model
 
 
-def distance(val1, val2):
-    # Euclidean and Manhattan distance is the same in 1d
-    return abs(val1 - val2)
+# def distance(val1, val2):
+#     # Euclidean and Manhattan distance is the same in 1d
+#     return abs(val1 - val2)
 
 
 
