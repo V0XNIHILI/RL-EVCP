@@ -6,6 +6,7 @@ import igraph
 import gym
 from gym import spaces
 
+from src.optimization.heuristic_greedy import compute_greedy_heuristic
 from src.utils.timedata import t_hr_to_t_str, create_timesteps_hr, round_t_hr, split_dates_train_and_test_monthly
 from src.environments.visualization import _make_graph
 from src.devices.device import Device
@@ -338,10 +339,20 @@ class GymPowerVoltageEnv(gym.Env):
             else:
                 p_ev = action
 
-            p, v, model = project_constraints_ev(p_ev, self.ev_charger_inds, self.u, self.p_min,
-                                              self.p_max, self.v_min, self.v_max, self.conductance_matrix,
-                                              self.i_max_matrix, lossless=self.config["lossless_solver"],
-                                              iterations=self.config["solver_iterations"])
+            if self.config["predicting_bounds"]:
+                print(self.p_max)
+                for new_max_power, d_ind in zip(p_ev, self.ev_charger_inds):
+                    self.p_max[d_ind] = new_max_power
+                print(self.p_max)
+
+                p, v, model = compute_greedy_heuristic(self.u, self.p_min, self.p_max, self.v_min, self.v_max,
+                                                       self.conductance_matrix, self.i_max_matrix,
+                                                       lossless=self.config["lossless_solver"], tee=False)
+            else:
+                p, v, model = project_constraints_ev(p_ev, self.ev_charger_inds, self.u, self.p_min,
+                                                  self.p_max, self.v_min, self.v_max, self.conductance_matrix,
+                                                  self.i_max_matrix, lossless=self.config["lossless_solver"],
+                                                  iterations=self.config["solver_iterations"])
         else:
             # give 1 array with p,v instead of 2
             p_in = action[:self.n_devices]
@@ -426,15 +437,15 @@ class GymPowerVoltageEnv(gym.Env):
         else:
             training_reward += self.config["utility_reward_factor"] * reward
 
-        if training_reward > 0:
-            print(f'training_reward: {training_reward}')
-            print(f'current component: {-self.config["current_reward_factor"] * i_constraints_violation}')
-            print(f'power component: {-self.config["power_reward_factor"] * power_flow_constraints_violation}')
-            print(f'utility component: {self.config["utility_reward_factor"] * reward}')
-            print('voltages')
-            print(v)
-            print('power')
-            print(p)
+        # if training_reward > 0:
+        #     print(f'training_reward: {training_reward}')
+        #     print(f'current component: {-self.config["current_reward_factor"] * i_constraints_violation}')
+        #     print(f'power component: {-self.config["power_reward_factor"] * power_flow_constraints_violation}')
+        #     print(f'utility component: {self.config["utility_reward_factor"] * reward}')
+        #     print('voltages')
+        #     print(v)
+        #     print('power')
+        #     print(p)
 
         # return in gym format, result is now the info part of result
         return self.compute_current_state(normalized=self.normalize_outputs), training_reward, self.done, result
