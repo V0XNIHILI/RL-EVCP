@@ -156,7 +156,7 @@ class Runner:
                                                     self.env.conductance_matrix, self.env.i_max_matrix,
                                                     lossless=True, tee=False)
                 action = np.concatenate((p,v), axis=0)
-                _, _, _, result = self.env.step(action)
+                _, _, _, result = self.env.step(action, full_state=True)
                 total_greedy_reward += result['reward']
             episode_results['greedy_reward'] = total_greedy_reward
             # deterministic solution
@@ -171,7 +171,7 @@ class Runner:
             total_deterministic_reward = 0
             while not self.env.done:
                 action = np.concatenate((p_det[self.env.t_ind], v_det[self.env.t_ind]), axis=0)
-                _, _, _, result = self.env.step(action)
+                _, _, _, result = self.env.step(action, full_state=True)
 
                 total_deterministic_reward += result['reward']
 
@@ -185,7 +185,7 @@ class Runner:
                 reshaped_state = state.reshape(-1, self.env.n_devices)
                 p_lbs_t, p_ubs_t, v_lbs_t, v_ubs_t, u_t = reshaped_state[0], reshaped_state[1], reshaped_state[2], reshaped_state[3], reshaped_state[4]
                 action = np.concatenate((p_ubs_t,v_ubs_t), axis=0)
-                _, _, _, result = self.env.step(action)
+                _, _, _, result = self.env.step(action, full_state=True)
                 total_max_reward += result['reward']
             episode_results['max_reward'] = total_max_reward
             # reset variables

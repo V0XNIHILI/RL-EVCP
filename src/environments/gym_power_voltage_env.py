@@ -327,10 +327,10 @@ class GymPowerVoltageEnv(gym.Env):
 
         return i_constraints_violation, power_flow_constraints_violation, total_i, total_max_i, max_i, total_p, total_target_p
 
-    def step(self, action):
+    def step(self, action, full_state=False):
         """ Received actions are in [-1, 1] """
 
-        if self.config["EV_only"]:
+        if self.config["EV_only"] and not full_state:
             self.compute_current_state()
 
             if self.use_rescaled_actions:
@@ -340,14 +340,28 @@ class GymPowerVoltageEnv(gym.Env):
                 p_ev = action
 
             if self.config["predicting_bounds"]:
-                print(self.p_max)
                 for new_max_power, d_ind in zip(p_ev, self.ev_charger_inds):
                     self.p_max[d_ind] = new_max_power
-                print(self.p_max)
 
                 p, v, model = compute_greedy_heuristic(self.u, self.p_min, self.p_max, self.v_min, self.v_max,
                                                        self.conductance_matrix, self.i_max_matrix,
                                                        lossless=self.config["lossless_solver"], tee=False)
+
+                if np.isnan(p[0]):
+                    print("got nan")
+                    print("actions before scaling:")
+                    print(action)
+                    print("p_max before ev bounds:")
+                    print(self.p_max)
+                    print("actions after scaling:")
+                    print(p_ev)
+                    print("ev pmax:")
+                    print(self.p_max[self.ev_charger_inds])
+                    print("ev pmin:")
+                    print(self.p_min[self.ev_charger_inds])
+                    print("p_max after ev bounds:")
+                    print(self.p_max)
+
             else:
                 p, v, model = project_constraints_ev(p_ev, self.ev_charger_inds, self.u, self.p_min,
                                                   self.p_max, self.v_min, self.v_max, self.conductance_matrix,
@@ -358,14 +372,14 @@ class GymPowerVoltageEnv(gym.Env):
             p_in = action[:self.n_devices]
             v_in = action[self.n_devices:]
 
-            if self.use_rescaled_actions:
+            if self.use_rescaled_actions and not full_state:
                 # return to real power and voltage based on current bounds
                 p, v = self.rescale_action(p_in, v_in)
             else:
                 p = p_in
                 v = v_in
 
-            if self.use_constraint_projection:
+            if self.use_constraint_projection and not full_state:
                 self.compute_current_state()
                 # TODO: why do we still use the previous steps() self.u here?
                 p, v, model = project_constraints(p, v, self.n_devices, self.u, self.p_min,

@@ -36,7 +36,7 @@ def compute_greedy_heuristic(u_t, p_lbs_t, p_ubs_t, v_lbs_t, v_ubs_t, conductanc
         model.per_device_utility.append(val)
     model.f = Objective(sense=maximize, expr=sum(model.per_device_utility))
     if lossless:
-        solver = SolverFactory('glpk')
+        solver = SolverFactory('glpk') #, executable='E:\\Boeken\\Jaar 5\\Q4 Project\\winglpk-4.65\\glpk-4.65\\w64\\glpsol')
     else:
         solver = SolverFactory('ipopt')
     solver.solve(model, tee=tee)

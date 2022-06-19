@@ -58,7 +58,7 @@ def compute_deterministic_solution(dt_min, evs_dict, u, p_lbs, p_ubs, v_lbs, v_u
             per_device_utility.append(val)
     model.f = Objective(sense=maximize, expr=sum(per_device_utility))
     if lossless:
-        solver = SolverFactory('glpk')
+        solver = SolverFactory('glpk') #, executable='E:\\Boeken\\Jaar 5\\Q4 Project\\winglpk-4.65\\glpk-4.65\\w64\\glpsol')
     else:
         solver = SolverFactory('ipopt')
     solver.solve(model, tee=tee)
