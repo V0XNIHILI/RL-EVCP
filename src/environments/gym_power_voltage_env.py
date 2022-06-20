@@ -353,7 +353,8 @@ class GymPowerVoltageEnv(gym.Env):
                         p_m = self.p_max if second_try else new_p_max
                         p, v, model = compute_greedy_heuristic(self.u, self.p_min, p_m, self.v_min, self.v_max,
                                                                self.conductance_matrix, self.i_max_matrix,
-                                                               lossless=self.config["lossless_solver"], tee=False)
+                                                               lossless=self.config["lossless_solver"], tee=False,
+                                                               iterations=self.config["solver_iterations"])
                         if(np.isnan(p[0])):
                             raise ValueError("Got nan")
 

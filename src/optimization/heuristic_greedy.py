@@ -3,7 +3,7 @@ from pyomo.environ import *
 
 
 def compute_greedy_heuristic(u_t, p_lbs_t, p_ubs_t, v_lbs_t, v_ubs_t, conductance_matrix, i_max_matrix,
-                             lossless=False, tee=False):
+                             lossless=False, tee=False, iterations=None):
     p_lbs_t, p_ubs_t = p_lbs_t * 1000, p_ubs_t * 1000  # Transform powers to W from  kW
     model = ConcreteModel()
     model.devices = Set(initialize=range(u_t.shape[0]))
@@ -36,9 +36,11 @@ def compute_greedy_heuristic(u_t, p_lbs_t, p_ubs_t, v_lbs_t, v_ubs_t, conductanc
         model.per_device_utility.append(val)
     model.f = Objective(sense=maximize, expr=sum(model.per_device_utility))
     if lossless:
-        solver = SolverFactory('glpk') #, executable='E:\\Boeken\\Jaar 5\\Q4 Project\\winglpk-4.65\\glpk-4.65\\w64\\glpsol')
+        solver = SolverFactory('glpk') # , executable='E:\\Boeken\\Jaar 5\\Q4 Project\\winglpk-4.65\\glpk-4.65\\w64\\glpsol')
     else:
         solver = SolverFactory('ipopt')
+        if iterations is not None:
+            solver.options['max_iter'] = iterations  # number of iterations you wish
     solver.solve(model, tee=tee)
     p = dict_to_matrix(model.p, model.devices.data()) / 1000
     v = dict_to_matrix(model.v, model.devices.data())
